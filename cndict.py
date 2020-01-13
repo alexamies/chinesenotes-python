@@ -1,21 +1,34 @@
 # -*- coding: utf-8 -*-
 """
-Utility loads the NTI Reader dictionary into a Python dictionary.
+Utility loads the Chinese Notes Reader dictionary into a Python dictionary.
 
 Simplified and traditional words are keys.
 """
+import argparse
 import codecs
+import logging
+import os
+import sys
 
 
-DICT_FILE_NAME = '../data/dictionary/words.txt'
-wdict = {}
+def Lookup(wdict, keyword):
+  """Looks up the keyword in the dictionary
+  """
+  entry = {}
+  if keyword in wdict:
+    entry = wdict[keyword]
+    logging.info("{}".format(entry["english"]))
+  else:
+    logging.info("No entry for {}".format(keyword))
+  return entry
 
 
-def OpenDictionary():
+def OpenDictionary(fname):
   """Reads the dictionary into memory
   """
-  print("Opening the NTI Reader dictionary")
-  with codecs.open(DICT_FILE_NAME, 'r', "utf-8") as f:
+  logging.info("Opening the Chinese Notes Reader dictionary")
+  wdict = {}
+  with codecs.open(fname, 'r', "utf-8") as f:
     for line in f:
       line = line.strip()
       if not line:
@@ -46,7 +59,24 @@ def OpenDictionary():
             else:
               entry['other_entries'] = []
               wdict[traditional] = entry
-  print("OpenDictionary completed with %d entries" % len(wdict))
+  logging.info("OpenDictionary completed with %d entries" % len(wdict))
   return wdict
 
-wdict = OpenDictionary()
+
+def main():
+  if os.environ.get("CNREADER_HOME") is None:
+    print("CNREADER_HOME is not defined")
+    sys.exit(1)
+  logging.basicConfig(level=logging.INFO)
+  cn_home = os.environ["CNREADER_HOME"]
+  fname = "{}/data/words.txt".format(cn_home)
+  wdict = OpenDictionary(fname)
+  parser = argparse.ArgumentParser()
+  parser.add_argument("lookup")
+  args = parser.parse_args()
+  Lookup(wdict, args.lookup)
+
+
+# Entry point from a script
+if __name__ == "__main__":
+  main()
