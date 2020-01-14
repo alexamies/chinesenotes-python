@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Utility for segmenting text
+Utility for tokenizing text
 """
 from cndict import OpenDictionary
 import argparse
