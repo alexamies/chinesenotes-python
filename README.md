@@ -45,3 +45,62 @@ INFO:root:Greedy dictionary-based text segmentation
 INFO:root:Chunk: 東家人死。西家人助哀。
 INFO:root:Segments: ['東家', '人', '死', '。', '西家', '人', '助', '哀', '。']
 ```
+
+## Text analysis
+
+See [Quickstart using Python](https://cloud.google.com/dataflow/docs/quickstarts/quickstart-python)
+
+Set environment variables
+
+```shell
+GOOGLE_APPLICATION_CREDENTIALS=credentials.json
+INPUT_BUCKET=ntinreader-text
+OUTPUT_BUCKET=ntinreader-analysis
+PROJECT=[your project]
+```
+
+Activate a virtual environment
+
+```shell
+python3 -m venv venv
+source venv/bin/activate
+```
+
+Run locally
+
+```shell
+CORPUS_HOME=...
+python charcount.py \
+  --corpus_home $CORPUS_HOME \
+  --ignorelines ignorelines.txt \
+  --output outputs
+```  
+
+Read one file only
+
+```shell
+CORPUS_HOME=...
+python charcount.py \
+  --input $CORPUS_HOME/corpus/taisho/t2003_01.txt \
+  --ignorelines $CORPUS_HOME/data/corpus/ignorelines.txt \
+  --output outputs
+```  
+
+Run with Dataflow. You will need to copy the corpus text files into GCS first.
+
+```shell
+python charcount.py \
+  --input gs://$INPUT_BUCKET/taisho/t2003_01.txt \
+  --output gs://$OUTPUT_BUCKET/analysis/outputs \
+  --runner DataflowRunner \
+  --project $PROJECT \
+  --temp_location gs://$OUTPUT_BUCKET/tmp/
+```  
+
+Results
+
+```shell
+gsutil cat "gs://$OUTPUT_BUCKET/analysis/outputs*" > output.txt
+less output.txt
+rm output.txt
+```
