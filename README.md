@@ -48,7 +48,26 @@ INFO:root:Segments: ['東家', '人', '死', '。', '西家', '人', '助', '哀
 
 ## Text analysis
 
-See [Quickstart using Python](https://cloud.google.com/dataflow/docs/quickstarts/quickstart-python)
+### Setup up
+The text analysis requires the Apache Beam Python SDK.
+See 
+[Apache Beam Python SDK Quickstart](https://beam.apache.org/get-started/quickstart-py/)
+for details on running Apache Beam . You can run it locally or on the cloud 
+Google Cloud Dataflow or another implementation.
+
+A small corpus of Chinese texts is included in this repo. To run this on a full
+corpus download either the Chinese Notes corpus of literary Chinese
+
+```shell
+git clone https://github.com/alexamies/chinesenotes.com.git
+```
+
+or the NTI Reader corpus for the Taisho Tripitaka version of the Chinese
+Buddhist canon
+
+```shell
+git clone https://github.com/alexamies/buddhist-dictionary.git
+```
 
 Set environment variables
 
@@ -66,7 +85,9 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-Run locally, read one file only
+### Character frequency analysis
+
+To run locally, reading one file only
 
 ```shell
 CORPUS_HOME=.
@@ -76,7 +97,7 @@ python charcount.py \
   --output outputs
 ```
 
-Process all files in corpus
+To process all files in corpus
 
 ```shell
 CORPUS_HOME=.
@@ -126,4 +147,16 @@ mkdir tmp
 gsutil cp gs://$OUTPUT_BUCKET/analysis/* tmp/
 cat tmp/* > char_freq.tsv
 rm -rf tmp
+```
+
+### Term frequency analysis
+
+Run locally, read one file only
+
+```shell
+CORPUS_HOME=.
+python term_frequency.py \
+  --input $CORPUS_HOME/corpus/shijing/shijing001.txt \
+  --ignorelines $CORPUS_HOME/data/corpus/ignorelines.txt \
+  --output outputs
 ```

@@ -11,8 +11,6 @@ import sys
 
 def Greedy(wdict, chunk):
   segments = []
-  logging.info("Greedy dictionary-based text segmentation")
-  logging.info("Chunk: {}".format(chunk))
   i = 0
   while i < len(chunk):
     for j in range(len(chunk), -1, -1):
@@ -25,7 +23,7 @@ def Greedy(wdict, chunk):
         segments.append(w)
         i += 1
         break
-  logging.info("Segments: {}".format(segments))
+  return segments
 
 
 # Basic test
@@ -40,7 +38,10 @@ def main():
   parser = argparse.ArgumentParser()
   parser.add_argument("chunk")
   args = parser.parse_args()
-  Greedy(wdict, args.chunk)
+  logging.info("Greedy dictionary-based text segmentation")
+  logging.info("Chunk: {}".format(args.chunk))
+  segments = Greedy(wdict, args.chunk)
+  logging.info("Segments: {}".format(segments))
 
 
 if __name__ == "__main__":

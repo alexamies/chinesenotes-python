@@ -15,7 +15,11 @@
 # limitations under the License.
 #
 
-"""A character counting pipeline."""
+"""A term frequency pipeline for Chinese text.
+
+Counts terms, including multi-word expressions, based on a dictionary tokenizer
+over a corpus of Chinese text.
+"""
 
 from __future__ import absolute_import
 
@@ -34,28 +38,30 @@ from apache_beam.options.pipeline_options import PipelineOptions
 from apache_beam.options.pipeline_options import SetupOptions
 from apache_beam.io.textio import ReadAllFromText
 
+from cndict import OpenDictionary
+from tokenizer import Greedy
 
-class CharExtractingDoFn(beam.DoFn):
-  """Parse each line of input text into characters."""
+
+class TermExtractingDoFn(beam.DoFn):
+  """Parse each line of input text into multi-character terms."""
 
   def __init__(self):
     beam.DoFn.__init__(self)
+    cn_home = "https://github.com/alexamies/chinesenotes.com"
+    fname = "{}/blob/master/data/words.txt?raw=true".format(cn_home)
+    self.wdict = OpenDictionary(fname)
     self.char_counter = Metrics.counter(self.__class__, 'chars')
+    self.file_counter = Metrics.counter(self.__class__, 'files')
 
   def process(self, element):
-    """Returns an iterator over the characters of this element.
+    """Returns an iterator over the tokens of this oine of text.
     Args:
       element: a line of text
     Returns:
-      A list of characters
+      A list of tokens
     """
     line = element.strip()
-    chars = []
-    for c in line:
-      if ord(c) > 128: # Exclue ASCII characters
-        chars.append(c)
-        self.char_counter.inc()
-    return chars
+    return Greedy(self.wdict, line)
 
 
 class ExtractIndexEntry(beam.DoFn):
@@ -67,6 +73,7 @@ class ExtractIndexEntry(beam.DoFn):
     fnames = []
     if len(fields) > 0 and not fields[0].startswith('#'):
       fnames.append(fields[0])
+      self.file_counter.inc()
     return fnames
 
 
@@ -158,7 +165,7 @@ def run(argv=None, save_main_session=True):
 
   counts = (lines
             | 'filter' >> beam.Filter(not_boilerplate)
-            | 'split' >> (beam.ParDo(CharExtractingDoFn())
+            | 'split' >> (beam.ParDo(TermExtractingDoFn())
                           .with_output_types(unicode))
             | 'pair_with_one' >> beam.Map(lambda x: (x, 1))
             | 'group' >> beam.GroupByKey()
@@ -175,6 +182,12 @@ def run(argv=None, save_main_session=True):
   result = p.run()
   result.wait_until_finish()
   if (not hasattr(result, 'has_job') or result.has_job):
+    files_count_filter = MetricsFilter().with_name('files')
+    files_query_result = result.metrics().query(files_count_filter)
+    if files_query_result['counters']:
+      files_counter = query_result['counters'][0]
+      logging.info('Total files: %d (including index files)',
+                   files_counter.result)
     chars_count_filter = MetricsFilter().with_name('chars')
     query_result = result.metrics().query(chars_count_filter)
     if query_result['counters']:
