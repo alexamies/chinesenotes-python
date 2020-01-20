@@ -66,27 +66,29 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-Run locally
+Run locally, read one file only
 
 ```shell
-CORPUS_HOME=...
+CORPUS_HOME=.
+python charcount.py \
+  --input $CORPUS_HOME/corpus/shijing/shijing001.txt \
+  --ignorelines $CORPUS_HOME/data/corpus/ignorelines.txt \
+  --output outputs
+```
+
+Process all files in corpus
+
+```shell
+CORPUS_HOME=.
 python charcount.py \
   --corpus_home $CORPUS_HOME \
-  --ignorelines ignorelines.txt \
-  --output outputs
-```  
-
-Read one file only
-
-```shell
-CORPUS_HOME=...
-python charcount.py \
-  --input $CORPUS_HOME/corpus/taisho/t2003_01.txt \
+  --corpus_prefix corpus \
   --ignorelines $CORPUS_HOME/data/corpus/ignorelines.txt \
   --output outputs
 ```  
 
 Run with Dataflow. You will need to copy the corpus text files into GCS first.
+For a single file
 
 ```shell
 python charcount.py \
@@ -103,4 +105,25 @@ Results
 gsutil cat "gs://$OUTPUT_BUCKET/analysis/outputs*" > output.txt
 less output.txt
 rm output.txt
+```
+
+For the whole corpus
+
+```shell
+python charcount.py \
+  --corpus_home gs://$INPUT_BUCKET \
+  --ignorelines $CORPUS_HOME/data/corpus/ignorelines.txt \
+  --output gs://$OUTPUT_BUCKET/charcount/outputs \
+  --runner DataflowRunner \
+  --project $PROJECT \
+  --temp_location gs://$OUTPUT_BUCKET/tmp/
+```  
+
+Get the results
+
+```shell
+mkdir tmp
+gsutil cp gs://$OUTPUT_BUCKET/analysis/* tmp/
+cat tmp/* > char_freq.tsv
+rm -rf tmp
 ```

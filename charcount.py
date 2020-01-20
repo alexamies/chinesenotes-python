@@ -32,6 +32,7 @@ from apache_beam.metrics import Metrics
 from apache_beam.metrics.metric import MetricsFilter
 from apache_beam.options.pipeline_options import PipelineOptions
 from apache_beam.options.pipeline_options import SetupOptions
+from apache_beam.io.textio import ReadAllFromText
 
 
 class CharExtractingDoFn(beam.DoFn):
@@ -55,6 +56,26 @@ class CharExtractingDoFn(beam.DoFn):
         chars.append(c)
         self.char_counter.inc()
     return chars
+
+
+class ExtractIndexEntry(beam.DoFn):
+  """Reads a line of an index file"""
+    
+  def process(self, element):
+    """Returns the first field, which is the file name, if not a comment"""
+    fields = element.split('\t')
+    fnames = []
+    if len(fields) > 0 and not fields[0].startswith('#'):
+      fnames.append(fields[0])
+    return fnames
+
+
+def add_prefix(fname, dname = ''):
+  """Combines directory and file name"""
+  path = fname
+  if dname:
+    path = '{}/{}'.format(dname, fname)
+  yield path
 
 
 def load_ignore(fname):
@@ -81,6 +102,9 @@ def run(argv=None, save_main_session=True):
   parser.add_argument('--input',
                       dest='input',
                       help='Provide either corpus home or single input file')
+  parser.add_argument('--corpus_prefix',
+                      dest='corpus_prefix',
+                      help='Prefix after corpus home where the files are')
   parser.add_argument('--ignorelines',
                       dest='ignorelines',
                       help='Ignore lines containing these words')
@@ -97,8 +121,20 @@ def run(argv=None, save_main_session=True):
     ignorepatterns = load_ignore(known_args.ignorelines)
   if known_args.corpus_home:
     logging.info('corpus_home: %s', known_args.corpus_home)
-    fName = '{}/data/corpus/collections.csv'.format(known_args.corpus_home)
-    lines = p | 'read' >> ReadFromText(fName)
+    corpus_data_dir = '{}/data/corpus'.format(known_args.corpus_home)
+    corpus_index = '{}/collections.csv'.format(corpus_data_dir)
+    corpus_dir = known_args.corpus_home
+    if known_args.corpus_prefix:
+      corpus_dir = '{}/{}'.format(known_args.corpus_home,
+                                  known_args.corpus_prefix)
+    lines = (p | 'read_top_index' >> ReadFromText(corpus_index)
+              | 'split_top_index' >> beam.ParDo(ExtractIndexEntry())
+              | 'add_prefix_corpus_data' >> beam.FlatMap(add_prefix,
+                                                         corpus_data_dir)
+              | 'read_secondary_index' >> ReadAllFromText()
+              | 'split_secondary_index' >> beam.ParDo(ExtractIndexEntry())
+              | 'add_prefix_corpus_dir' >> beam.FlatMap(add_prefix, corpus_dir)
+              | 'read_files' >> ReadAllFromText())
   else:
     lines = p | 'read' >> ReadFromText(known_args.input)
 
@@ -144,6 +180,7 @@ def run(argv=None, save_main_session=True):
     if query_result['counters']:
       chars_counter = query_result['counters'][0]
       logging.info('Total chars: %d', chars_counter.result)
+
 
 if __name__ == '__main__':
   logging.getLogger().setLevel(logging.INFO)

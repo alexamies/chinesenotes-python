@@ -1,0 +1,4 @@
+# Top level file listing the corpus collections
+#Collection File, HTML Gloss File, Title, Description, Introduction File, Corpus, Language, Format, Period
+shijing.csv	shijing.html	The Book of Songs 《詩經》	An early collection of Chinese poems, with English translation by James Legge	shijing/shijing000.txt	Literary Chinese	Bilingual	c. 1000 to 600 BCE	Verse
+shangshu.csv	shangshu.html	Book of Documents 《尚書》	An early collection of proclamations and instructions attributed to the founders of the Zhou dynasty, with English translation by James Legge	shangshu/shangshu000.txt	Literary Chinese	Bilingual	Pre-Han	Non-fiction
