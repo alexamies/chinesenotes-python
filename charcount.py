@@ -98,10 +98,10 @@ def run(argv=None, save_main_session=True):
   parser = argparse.ArgumentParser()
   parser.add_argument('--corpus_home',
                       dest='corpus_home',
-                      help='Provide either corpus home or single input file')
+                      help='The directory or bucke of the corpus home')
   parser.add_argument('--input',
                       dest='input',
-                      help='Provide either corpus home or single input file')
+                      help='A single input file')
   parser.add_argument('--corpus_prefix',
                       dest='corpus_prefix',
                       help='Prefix after corpus home where the files are')

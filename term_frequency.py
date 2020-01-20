@@ -51,7 +51,6 @@ class TermExtractingDoFn(beam.DoFn):
     fname = "{}/blob/master/data/words.txt?raw=true".format(cn_home)
     self.wdict = OpenDictionary(fname)
     self.char_counter = Metrics.counter(self.__class__, 'chars')
-    self.file_counter = Metrics.counter(self.__class__, 'files')
 
   def process(self, element):
     """Returns an iterator over the tokens of this oine of text.
@@ -66,6 +65,10 @@ class TermExtractingDoFn(beam.DoFn):
 
 class ExtractIndexEntry(beam.DoFn):
   """Reads a line of an index file"""
+
+  def __init__(self):
+    beam.DoFn.__init__(self)
+    self.file_counter = Metrics.counter(self.__class__, 'files')
     
   def process(self, element):
     """Returns the first field, which is the file name, if not a comment"""
@@ -105,10 +108,10 @@ def run(argv=None, save_main_session=True):
   parser = argparse.ArgumentParser()
   parser.add_argument('--corpus_home',
                       dest='corpus_home',
-                      help='Provide either corpus home or single input file')
+                      help='The directory or bucke of the corpus home')
   parser.add_argument('--input',
                       dest='input',
-                      help='Provide either corpus home or single input file')
+                      help='A single input file')
   parser.add_argument('--corpus_prefix',
                       dest='corpus_prefix',
                       help='Prefix after corpus home where the files are')
@@ -185,7 +188,7 @@ def run(argv=None, save_main_session=True):
     files_count_filter = MetricsFilter().with_name('files')
     files_query_result = result.metrics().query(files_count_filter)
     if files_query_result['counters']:
-      files_counter = query_result['counters'][0]
+      files_counter = files_query_result['counters'][0]
       logging.info('Total files: %d (including index files)',
                    files_counter.result)
     chars_count_filter = MetricsFilter().with_name('chars')

@@ -87,6 +87,12 @@ source venv/bin/activate
 
 ### Character frequency analysis
 
+To list all options
+
+```shell
+python charcount.py --help
+```
+
 To run locally, reading one file only
 
 ```shell
@@ -128,7 +134,7 @@ less output.txt
 rm output.txt
 ```
 
-For the whole corpus
+For the whole corpus, running on Dataflow
 
 ```shell
 python charcount.py \
@@ -151,12 +157,28 @@ rm -rf tmp
 
 ### Term frequency analysis
 
+To list all options
+
+```shell
+python term_frequency.py --help
+```
+
 Run locally, read one file only
 
 ```shell
 CORPUS_HOME=.
 python term_frequency.py \
   --input $CORPUS_HOME/corpus/shijing/shijing001.txt \
+  --ignorelines $CORPUS_HOME/data/corpus/ignorelines.txt \
+  --output outputs
+```
+
+Run on an entire corpus, locally
+
+```shell
+python term_frequency.py \
+  --corpus_home $CORPUS_HOME \
+  --corpus_prefix corpus \
   --ignorelines $CORPUS_HOME/data/corpus/ignorelines.txt \
   --output outputs
 ```
