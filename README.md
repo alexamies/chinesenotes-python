@@ -182,3 +182,15 @@ python term_frequency.py \
   --ignorelines $CORPUS_HOME/data/corpus/ignorelines.txt \
   --output outputs
 ```
+
+Run on an entire corpus, using Dataflow
+
+```shell
+python term_frequency.py \
+  --corpus_home gs://$INPUT_BUCKET \
+  --ignorelines $CORPUS_HOME/data/corpus/ignorelines.txt \
+  --output gs://$OUTPUT_BUCKET/charcount/outputs \
+  --runner DataflowRunner \
+  --project $PROJECT \
+  --temp_location gs://$OUTPUT_BUCKET/tmp/
+```
