@@ -256,3 +256,17 @@ python chinesenotes/mutualinfo.py \
   --output_file output/bluecliff01_mi.tsv \
   --filter_file output/bluecliff01.tsv
 ```
+
+Check for 之下 in the NTI Reader corpus:
+
+Term freq (corpus): 969
+Character freq (之): 471993
+Character freq (下): 183996
+Total characters: 85,519,494
+Total terms: 81,261,122
+Mutual information:
+I(之,下) = log2[ P(a, b) / P(a) P(b)]
+        = log2[(969 / 81261122) / [(471993 / 85519494) * (183996/85519494)]]
+        = 164.7
+
+which matches the output of the program.

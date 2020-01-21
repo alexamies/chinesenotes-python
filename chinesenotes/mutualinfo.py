@@ -75,7 +75,7 @@ def load_freq(fname):
         val = int(fields[1])
         dist[key] = val
         count += val
-  logging.info('load_freq: {} entries loaded from {}'.format(len(dist), fname))
+  logging.info('load_freq: {} count loaded from {}'.format(count, fname))
   return (dist, count)
 
 def write_mi(fname, mi):
@@ -105,7 +105,6 @@ def main():
                       help='Output file to write results to')
   parser.add_argument('--filter_file',
                       dest='filter_file',
-                      required=True,
                       help='Filter file to restrict results to')
   args = parser.parse_args()
   ComputeMutualInfo(args.char_freq_file,
