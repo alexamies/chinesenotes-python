@@ -1,7 +1,7 @@
 # Chinese Notes Python Utilities
 Python utilities for Chinese Notes Chinese-English dictionary
 
-## Open the dictionary file
+## Use the dictionary
 
 From a directory above chinesenotes-python, clone the chinesenots.com project
 
@@ -18,7 +18,7 @@ export CNREADER_HOME=$HOME/chinesenotes.com
 Lookup a word in the dictionary
 
 ```shell
-python3 cndict.py "你好"
+python3 chinesenotes/cndict.py --lookup "你好"
 ```
 
 You should see output like
@@ -33,7 +33,7 @@ INFO:root:hello
 Same as above for environment setup. To run the utility:
 
 ```shell
-python3 textsegmentation.py "東家人死。西家人助哀。"
+python3 chinesenotes/cndict.py --tokenize "東家人死。西家人助哀。"
 ```
 
 You should see output like
@@ -46,10 +46,30 @@ INFO:root:Chunk: 東家人死。西家人助哀。
 INFO:root:Segments: ['東家', '人', '死', '。', '西家', '人', '助', '哀', '。']
 ```
 
+## Converting between simplified and traditionl
+
+To convert traditional to simplified
+
+```shell
+python chinesenotes/charutil.py --tosimplified "四種廣說"
+```
+
+To convert to traditional
+
+```shell
+python chinesenotes/charutil.py --totraditional "操作系统"
+```
+
+To get pinyin
+
+```shell
+python chinesenotes/charutil.py --topinyin "操作系统"
+```
+
 ## Text analysis
 
 ### Setup up
-The text analysis requires the Apache Beam Python SDK.
+The text analysis programs require the Apache Beam Python SDK.
 See 
 [Apache Beam Python SDK Quickstart](https://beam.apache.org/get-started/quickstart-py/)
 for details on running Apache Beam . You can run it locally or on the cloud 
@@ -150,7 +170,7 @@ Get the results
 
 ```shell
 mkdir tmp
-gsutil cp gs://$OUTPUT_BUCKET/analysis/* tmp/
+gsutil -m cp gs://$OUTPUT_BUCKET/analysis/* tmp/
 cat tmp/* > char_freq.tsv
 rm -rf tmp
 ```
@@ -180,6 +200,7 @@ python term_frequency.py \
   --corpus_home $CORPUS_HOME \
   --corpus_prefix corpus \
   --ignorelines $CORPUS_HOME/data/corpus/ignorelines.txt \
+  --setup_file ./setup.py \
   --output outputs
 ```
 
@@ -189,8 +210,18 @@ Run on an entire corpus, using Dataflow
 python term_frequency.py \
   --corpus_home gs://$INPUT_BUCKET \
   --ignorelines $CORPUS_HOME/data/corpus/ignorelines.txt \
-  --output gs://$OUTPUT_BUCKET/charcount/outputs \
+  --output gs://$OUTPUT_BUCKET/termfreq/outputs \
   --runner DataflowRunner \
   --project $PROJECT \
+  --setup_file ./setup.py \
   --temp_location gs://$OUTPUT_BUCKET/tmp/
+```
+
+Get the results
+
+```shell
+mkdir tmp
+gsutil -m cp gs://$OUTPUT_BUCKET/analysis/* tmp/
+cat tmp/* > term_freq.tsv
+rm -rf tmp
 ```

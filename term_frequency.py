@@ -38,8 +38,8 @@ from apache_beam.options.pipeline_options import PipelineOptions
 from apache_beam.options.pipeline_options import SetupOptions
 from apache_beam.io.textio import ReadAllFromText
 
-from cndict import OpenDictionary
-from tokenizer import Greedy
+
+from chinesenotes import cndict
 
 
 class TermExtractingDoFn(beam.DoFn):
@@ -49,8 +49,8 @@ class TermExtractingDoFn(beam.DoFn):
     beam.DoFn.__init__(self)
     cn_home = "https://github.com/alexamies/chinesenotes.com"
     fname = "{}/blob/master/data/words.txt?raw=true".format(cn_home)
-    self.wdict = OpenDictionary(fname)
-    self.char_counter = Metrics.counter(self.__class__, 'chars')
+    self.wdict = cndict.OpenDictionary(fname, True)
+    self.term_counter = Metrics.counter(self.__class__, 'terms')
 
   def process(self, element):
     """Returns an iterator over the tokens of this oine of text.
@@ -60,7 +60,9 @@ class TermExtractingDoFn(beam.DoFn):
       A list of tokens
     """
     line = element.strip()
-    return Greedy(self.wdict, line)
+    terms = cndict.Greedy(self.wdict, line)
+    self.term_counter.inc(len(terms))
+    return terms
 
 
 class ExtractIndexEntry(beam.DoFn):
