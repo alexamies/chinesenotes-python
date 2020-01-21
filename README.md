@@ -193,15 +193,14 @@ python term_frequency.py \
   --output outputs
 ```
 
-Run on an entire corpus, locally
+For example, Blue Cliff Record Scroll 1:
 
 ```shell
+CORPUS_HOME=../buddhist-dictionary
 python term_frequency.py \
-  --corpus_home $CORPUS_HOME \
-  --corpus_prefix corpus \
+  --input $CORPUS_HOME/corpus/taisho/t2003_01.txt \
   --ignorelines $CORPUS_HOME/data/corpus/ignorelines.txt \
-  --setup_file ./setup.py \
-  --output outputs
+  --output output/bluecliff01.tsv
 ```
 
 Run on an entire corpus, using Dataflow
@@ -224,4 +223,36 @@ mkdir tmp
 gsutil -m cp gs://$OUTPUT_BUCKET/analysis/* tmp/
 cat tmp/* > term_freq.tsv
 rm -rf tmp
+```
+
+### Mutual Information
+To compute the mutual information for each term and write it to an output file:
+
+```shell
+python chinesenotes/mutualinfo.py \
+  --char_freq_file [FILE_NAME] \
+  --term_freq_file [FILE_NAME] \
+  --output_file [FILE_NAME]
+```
+
+For example, for the NTI Reader Taisho corpus
+
+```shell
+CORPUS_HOME=../buddhist-dictionary
+python chinesenotes/mutualinfo.py \
+  --char_freq_file $CORPUS_HOME/index/char_freq.tsv \
+  --term_freq_file $CORPUS_HOME/index/term_freq.tsv \
+  --output_file $CORPUS_HOME/index/mutual_info.tsv
+```
+
+Filter to specific terms, for example, the terms in th eBlue Cliff Record,
+Scroll 1:
+
+```shell
+CORPUS_HOME=../buddhist-dictionary
+python chinesenotes/mutualinfo.py \
+  --char_freq_file $CORPUS_HOME/index/char_freq.tsv \
+  --term_freq_file $CORPUS_HOME/index/term_freq.tsv \
+  --output_file output/bluecliff01_mi.tsv \
+  --filter_file output/bluecliff01.tsv
 ```
