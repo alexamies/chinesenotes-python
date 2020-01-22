@@ -55,10 +55,10 @@ def ComputeMutualInfo(char_freq_file, term_freq_file, output_file, filter_file):
       pt = term_freq[term] / term_count
       if not filter_freq and pc > 0.0:
         # No filtering, write all terms
-        mi[term] = math.log(2, pt / pc)
+        mi[term] = math.log(pt / pc, 2)
       elif filter_freq and term in filter_freq and pc > 0.0:
         # Restrict to filtered terms
-        mi[term] = math.log(2, pt / pc)
+        mi[term] = math.log(pt / pc, 2)
   write_mi(output_file, mi)
 
 
@@ -81,11 +81,10 @@ def load_freq(fname):
 def write_mi(fname, mi):
   """Writes the mutual informaiton distribution to the TSV output file
   """
-  logging.info('write_mi: writing {} terms'.format(len(mi)))
-  count = 0
   with codecs.open(fname, 'w', 'utf-8') as f:
     for t in mi:
       f.write('{}\t{}\n'.format(t, mi[t]))
+  logging.info('wrote {} terms to {}'.format(len(mi), fname))
 
 # For use from command line
 def main():
