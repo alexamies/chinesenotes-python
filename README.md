@@ -175,6 +175,32 @@ cat tmp/* > char_freq.tsv
 rm -rf tmp
 ```
 
+### Character frequency analysis
+
+The command line options are the same as the charcount.py program.
+To run locally, reading one file only
+
+```shell
+CORPUS_HOME=.
+python char_bigram_count.py \
+  --input $CORPUS_HOME/corpus/shijing/shijing001.txt \
+  --ignorelines $CORPUS_HOME/data/corpus/ignorelines.txt \
+  --output outputs
+```
+
+
+For the whole corpus, running on Dataflow
+
+```shell
+python char_bigram_count.py \
+  --corpus_home gs://$INPUT_BUCKET \
+  --ignorelines $CORPUS_HOME/data/corpus/ignorelines.txt \
+  --output gs://$OUTPUT_BUCKET/charbigramcount/outputs \
+  --runner DataflowRunner \
+  --project $PROJECT \
+  --temp_location gs://$OUTPUT_BUCKET/tmp/
+```  
+
 ### Term frequency analysis
 
 To list all options
@@ -231,7 +257,8 @@ To compute the mutual information for each term and write it to an output file:
 ```shell
 python chinesenotes/mutualinfo.py \
   --char_freq_file [FILE_NAME] \
-  --term_freq_file [FILE_NAME] \
+  --bigram_freq_file [FILE_NAME] \
+  --filter_file [FILE_NAME] \
   --output_file [FILE_NAME]
 ```
 
@@ -241,7 +268,8 @@ For example, for the NTI Reader Taisho corpus
 CORPUS_HOME=../buddhist-dictionary
 python chinesenotes/mutualinfo.py \
   --char_freq_file $CORPUS_HOME/index/char_freq.tsv \
-  --term_freq_file $CORPUS_HOME/index/term_freq.tsv \
+  --bigram_freq_file $CORPUS_HOME/index/char_bigram_freq.tsv \
+  --filter_file $CORPUS_HOME/index/term_freq.tsv \
   --output_file $CORPUS_HOME/index/mutual_info.tsv
 ```
 
@@ -252,22 +280,22 @@ Scroll 1:
 CORPUS_HOME=../buddhist-dictionary
 python chinesenotes/mutualinfo.py \
   --char_freq_file $CORPUS_HOME/index/char_freq.tsv \
-  --term_freq_file $CORPUS_HOME/index/term_freq.tsv \
-  --output_file output/bluecliff01_mi.tsv \
-  --filter_file output/bluecliff01.tsv
+  --bigram_freq_file $CORPUS_HOME/index/char_bigram_freq.tsv \
+  --filter_file output/bluecliff01.tsv \
+  --output_file output/bluecliff01_mi.tsv
 ```
 
 Check for the term 蠛蠓 'midge' in the NTI Reader corpus:
 
-Term freq (corpus): 13
+Bigram freq (蠛蠓 + 蠓蠛): 13 + 1 = 14
 Character freq (蠛): 19
 Character freq (蠓): 23
 Total characters: 85,519,494
-Total terms: 81,261,122
+Total bigrams: 83,666,199
 Mutual information:
 I(之,下) = log2[ P(a, b) / P(a) P(b)]
-        = log2[(13 / 81261122) / [(19 / 85519494) * (23/85519494)]]
-        = log2(2677375.876)
-        = 21.35
+        = log2[(14 / 83666199) / [(19 / 85519494) * (23/85519494)]]
+        = log2(2800443.4)
+        = 21.42
 
 which matches the output of the program.

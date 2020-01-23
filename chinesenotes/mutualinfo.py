@@ -17,7 +17,7 @@
 #
 
 """
-Derives mutual information of multi-character terms from term and char info.
+Derives mutual information of two-character terms from bigram and char info.
 """
 
 import argparse
@@ -26,39 +26,45 @@ import logging
 import math
 
 
-def ComputeMutualInfo(char_freq_file, term_freq_file, output_file, filter_file):
+def ComputeMutualInfo(char_freq_file, bi_freq_file, output_file, filter_file):
   """Computes mutual information of multi-character terms
 
-  Use the corpus term and character frequency information to compute the mutual
-  information for each term, compared to the characters being placed randomly
-  next to each other. The frequency files are those produced by the charcount.py
-  and term_frequency.py in this repo.
+  Use the corpus character and character bigram frequency information to compute
+  the mutual information for each bigram, compared to the characters being
+  placed randomly next to each other. The frequency files are those produced by
+  the charcount.py and char_bigram_count.py programs in this repo.
+  The list are filtered by dictionary terms from the term_frequency.py
+  program in this repo.
   """
   logging.info('ComputeMutualInfo: {}, {}'.format(char_freq_file,
-                                                  term_freq_file))
+                                                  bi_freq_file))
   (char_freq, char_count) = load_freq(char_freq_file)
-  (term_freq, term_count) = load_freq(term_freq_file)
-  filter_freq = None
-  if filter_file:
-    (filter_freq, filter_count) = load_freq(filter_file)
-  if char_count == 0 or term_count == 0:
-    logging.error('ComputeMutualInfo: count is zero: {}, {}'.format(char_count,
-                                                                    term_count))
+  (bigram_freq, bigram_count) = load_freq(bi_freq_file)
+  (filter_freq, filter_count) = load_freq(filter_file)
+  if char_count == 0 or bigram_count == 0:
+    logging.error('ComputeMutualInfo: count zero: {}, {}'.format(char_count,
+                                                                 bigram_count))
     return
   mi = {}
-  for term in term_freq:
+  for term in filter_freq:
     pc = 1.0
-    if len(term) > 1:
-      for c in term:
-        if c in char_freq:
-          pc *= char_freq[c] / char_count
-      pt = term_freq[term] / term_count
-      if not filter_freq and pc > 0.0:
-        # No filtering, write all terms
-        mi[term] = math.log(pt / pc, 2)
-      elif filter_freq and term in filter_freq and pc > 0.0:
-        # Restrict to filtered terms
-        mi[term] = math.log(pt / pc, 2)
+    # Only compute mutual information for two-character terms
+    if len(term) == 2:
+      c1 = term[0]
+      c2 = term[1]
+      if c1 in char_freq and c2 in char_freq:
+          pc = (char_freq[c1] * char_freq[c2]) / (char_count * char_count)
+      b1 = '{}{}'.format(c1, c2)
+      fb1 = 0
+      if b1 in bigram_freq:
+          fb1 = bigram_freq[b1]
+      b2 = '{}{}'.format(c2, c1)
+      fb2 = 0
+      if b2 in bigram_freq and b1 != b2:
+          fb2 = bigram_freq[b2]
+      pb = (fb1 + fb2) / bigram_count
+      if pb > 0 and pc > 0:
+        mi[term] = math.log(pb / pc, 2)
   write_mi(output_file, mi)
 
 
@@ -94,20 +100,21 @@ def main():
                       dest='char_freq_file',
                       required=True,
                       help='Character frequency file')
-  parser.add_argument('--term_freq_file',
-                      dest='term_freq_file',
+  parser.add_argument('--bigram_freq_file',
+                      dest='bigram_freq_file',
                       required=True,
-                      help='Term frequency file')
+                      help='Character bigram frequency file')
+  parser.add_argument('--filter_file',
+                      dest='filter_file',
+                      required=True,
+                      help='Filter file to restrict results to')
   parser.add_argument('--output_file',
                       dest='output_file',
                       required=True,
                       help='Output file to write results to')
-  parser.add_argument('--filter_file',
-                      dest='filter_file',
-                      help='Filter file to restrict results to')
   args = parser.parse_args()
   ComputeMutualInfo(args.char_freq_file,
-                    args.term_freq_file,
+                    args.bigram_freq_file,
                     args.output_file,
                     args.filter_file)
 
