@@ -299,3 +299,12 @@ I(之,下) = log2[ P(a, b) / P(a) P(b)]
         = 21.42
 
 which matches the output of the program.
+
+### Process Annotated Corpus file
+
+To process an annotated corpus file
+
+```shell
+python chinesenotes/process_annotated.py \
+  --filename corpus/shijing/shijing_annotated_example.md 
+```
