@@ -69,8 +69,7 @@ python chinesenotes/charutil.py --topinyin "操作系统"
 ## Text analysis
 
 ### Setup up
-The text analysis programs require the Apache Beam Python SDK.
-See 
+The text analysis programs require the Apache Beam Python SDK. See 
 [Apache Beam Python SDK Quickstart](https://beam.apache.org/get-started/quickstart-py/)
 for details on running Apache Beam . You can run it locally or on the cloud 
 Google Cloud Dataflow or another implementation.
@@ -98,12 +97,14 @@ OUTPUT_BUCKET=ntinreader-analysis
 PROJECT=[your project]
 ```
 
-Activate a virtual environment
+Create a virtual environment
 
 ```shell
 python3 -m venv venv
 source venv/bin/activate
 ```
+
+Install software and activate again when coming back.
 
 ### Character frequency analysis
 
@@ -123,7 +124,7 @@ python charcount.py \
   --output outputs
 ```
 
-To process all files in corpus
+To compute the character count for all files in corpus
 
 ```shell
 CORPUS_HOME=.
@@ -132,7 +133,13 @@ python charcount.py \
   --corpus_prefix corpus \
   --ignorelines $CORPUS_HOME/data/corpus/ignorelines.txt \
   --output outputs
-```  
+```
+
+Move the results to a convenient location
+
+```shell
+cat output* > data/corpus/analysis/char_freq.tsv 
+```
 
 Run with Dataflow. You will need to copy the corpus text files into GCS first.
 For a single file
@@ -175,7 +182,7 @@ cat tmp/* > char_freq.tsv
 rm -rf tmp
 ```
 
-### Character frequency analysis
+### Character bigram frequency analysis
 
 The command line options are the same as the charcount.py program.
 To run locally, reading one file only
@@ -188,8 +195,23 @@ python char_bigram_count.py \
   --output outputs
 ```
 
+For the whole corpus
 
-For the whole corpus, running on Dataflow
+```shell
+python char_bigram_count.py \
+  --corpus_home $CORPUS_HOME \
+  --corpus_prefix corpus \
+  --ignorelines $CORPUS_HOME/data/corpus/ignorelines.txt \
+  --output outputs
+```  
+
+Move the results to a convenient location
+
+```shell
+cat output* > data/corpus/analysis/char_bigram_freq.tsv 
+```
+
+Run on Dataflow
 
 ```shell
 python char_bigram_count.py \
@@ -229,7 +251,23 @@ python term_frequency.py \
   --output output/bluecliff01.tsv
 ```
 
-Run on an entire corpus, using Dataflow
+Run on the entire test corpus
+
+```shell
+python term_frequency.py \
+  --corpus_home $CORPUS_HOME \
+  --corpus_prefix corpus \
+  --ignorelines $CORPUS_HOME/data/corpus/ignorelines.txt \
+  --output outputs
+```
+
+Move the results to a convenient location
+
+```shell
+cat output* > data/corpus/analysis/term_freq.tsv 
+```
+
+Run using Dataflow
 
 ```shell
 python term_frequency.py \
@@ -262,7 +300,18 @@ python chinesenotes/mutualinfo.py \
   --output_file [FILE_NAME]
 ```
 
-For example, for the NTI Reader Taisho corpus
+For example, for the test corpus
+
+```shell
+CORPUS_HOME=.
+python chinesenotes/mutualinfo.py \
+  --char_freq_file $CORPUS_HOME/data/corpus/analysis/char_freq.tsv \
+  --bigram_freq_file $CORPUS_HOME/data/corpus/analysis/char_bigram_freq.tsv \
+  --filter_file $CORPUS_HOME/data/corpus/analysis/term_freq.tsv \
+  --output_file $CORPUS_HOME/data/corpus/analysis/mutual_info.tsv
+```
+
+For the NTI Reader Taisho corpus
 
 ```shell
 CORPUS_HOME=../buddhist-dictionary
@@ -306,5 +355,30 @@ To process an annotated corpus file
 
 ```shell
 python chinesenotes/process_annotated.py \
-  --filename corpus/shijing/shijing_annotated_example.md 
+  --filename corpus/shijing/shijing_annotated_example.md \
+  --mutual_info data/corpus/analysis/mutual_info.tsv \
+  --outfile data/corpus/analysis/shijing_training_example.tsv
+```
+
+A tab separated output file will be written containing all the terms in the
+annotated corpus and whether they were tokenized correctly.
+
+### Training the tokenizer
+Dictionary tokenization is still used by a filter is training to qualify
+whether to accept the token. The scikit-learn
+[decision tree classifier](https://scikit-learn.org/stable/modules/tree.html)
+is used for this.
+
+Install 
+[scikit-learn](https://scikit-learn.org/stable/install.html)
+
+```shell
+pip install -U scikit-learn
+```
+
+Run the trainer
+
+```shell
+python chinesenotes/train_tokenizer.py \
+  --infile data/corpus/analysis/shijing_training_example.tsv
 ```
