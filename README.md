@@ -322,7 +322,7 @@ python chinesenotes/mutualinfo.py \
   --output_file $CORPUS_HOME/index/mutual_info.tsv
 ```
 
-Filter to specific terms, for example, the terms in th eBlue Cliff Record,
+Filter to specific terms, for example, the terms in the Blue Cliff Record,
 Scroll 1:
 
 ```shell
@@ -363,6 +363,41 @@ python chinesenotes/process_annotated.py \
 A tab separated output file will be written containing all the terms in the
 annotated corpus and whether they were tokenized correctly.
 
+To run with the NTI Reader *Blue Cliff Record* data set
+
+```shell
+export CORPUS_HOME=../buddhist-dictionary
+python chinesenotes/process_annotated.py \
+  --filename $CORPUS_HOME/data/corpus/analysis/tokenization_annotated.md \
+  --mutual_info $CORPUS_HOME/index/mutual_info.tsv \
+  --outfile $CORPUS_HOME/data/corpus/analysis/tokenization_training.tsv
+```
+
+### Plot Results of Tokenization
+
+First [Install Matplotlib](https://matplotlib.org/users/installing.html).
+Also, a graphics backend. For example, on Debian
+
+```shell
+sudo apt-get install python3-tk
+```
+
+To plot the result of processing the annotated corpus file
+
+```shell
+python chinesenotes/plot_tokenization_results.py \
+  --infile data/corpus/analysis/shijing_training_example.tsv \
+  --outfile data/corpus/analysis/shijing_training_example.png
+```
+
+For the *Blue Cliff Record*
+
+```shell
+python chinesenotes/plot_tokenization_results.py \
+  --infile $CORPUS_HOME/data/corpus/analysis/tokenization_training.tsv \
+  --outfile $CORPUS_HOME/data/corpus/analysis/tokenization_training.png
+```
+
 ### Training the tokenizer
 Dictionary tokenization is still used by a filter is training to qualify
 whether to accept the token. The scikit-learn
@@ -376,9 +411,27 @@ Install
 pip install -U scikit-learn
 ```
 
-Run the trainer
+Run the trainer to the example corpus
 
 ```shell
 python chinesenotes/train_tokenizer.py \
-  --infile data/corpus/analysis/shijing_training_example.tsv
+  --infile data/corpus/analysis/shijing_training_example.tsv \
+  --outfile data/corpus/analysis/shijing_training_example.dot
+```
+
+
+For the *Blue Cliff Record*
+
+```shell
+python chinesenotes/train_tokenizer.py \
+  --infile $CORPUS_HOME/data/corpus/analysis/tokenization_training.tsv
+```
+
+Also, the points with low mutual information may also be added before training.
+
+Write output using graphviz
+
+```shell
+dot -Tps data/corpus/analysis/shijing_training_example.dot -o \
+  data/corpus/analysis/shijing_training_example.ps
 ```

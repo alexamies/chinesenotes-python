@@ -25,20 +25,25 @@ Reads the input file and trains the classifier.
 import argparse
 import codecs
 from sklearn import tree
+from sklearn.tree.export import export_text
+from sklearn.tree import export_graphviz
 
-def Train(infile):
+def Train(infile, outfile):
   """Train the classifier
 
   Args:
     infile: input file with the mutual information and training points
+    outfile: file name to write graphviz export to
   """
   X, Y = load_training_data(infile)
-  clf = tree.DecisionTreeClassifier()
+  clf = tree.DecisionTreeClassifier(random_state=0,
+                                    max_depth=2,
+                                    criterion='gini',
+                                    min_samples_split=3)
   clf = clf.fit(X, Y)
-  result = clf.predict([[2., 0]])
-  print(result)
-  prob = clf.predict_proba([[2., 0]])
-  print(prob)
+  r = export_text(clf)
+  print(r)
+  export_graphviz(clf, out_file = outfile, filled = True, rounded = True)
 
 
 def load_training_data(infile):
@@ -50,11 +55,12 @@ def load_training_data(infile):
       if line.startswith('#'):
         continue
       fields = line.split('\t')
-      if len(fields) > 2:
+      if len(fields) > 3:
         term = fields[0]
         mi = float(fields[1])
-        y = int(fields[2])
-        x = [mi, 0]
+        has_fn = int(fields[2])
+        y = int(fields[3])
+        x = [mi, has_fn]
         X.append(x)
         Y.append(y)
   return (X, Y)
@@ -64,8 +70,11 @@ def main():
   parser.add_argument('--infile',
                       dest='infile',
                       help='Training file name')
+  parser.add_argument('--outfile',
+                      dest='outfile',
+                      help='File name to write graphviz export to')
   args = parser.parse_args()
-  Train(args.infile)
+  Train(args.infile, args.outfile)
 
 
 # Entry point from a script

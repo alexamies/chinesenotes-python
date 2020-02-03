@@ -92,3 +92,51 @@ Translation: And I will rinse my robes. 4
 Translation: Which need to be rinsed, which do not? 4
 歸寧、父母。
 Translation: I am going back to visit my parents. 2
+
+## 國風‧周南‧卷耳 Lessons from the states - Odes Of Zhou And The South - Juan Er
+
+采采、卷耳，
+Translation: I was gathering and gathering the mouse-ear,
+Error: 采采 (false positive, characters should not be grouped)
+Error: 卷耳 (false negative, missing term)
+不盈、頃筐，
+Translation: But could not fill my shallow basket.
+Error: 不盈 (false negative, missing term)
+Error: 頃筐 (false negative, missing term)
+嗟、我、懷、人，
+Translation: With a sigh for the man of my heart,
+寘、彼、周行。
+Translation: I placed it there on the highway.
+Error: 周行 (false negative, missing term)
+
+陟、彼、崔嵬，
+Translation: I was ascending that rock-covered height,
+我、馬、虺隤，
+Translation: But my horses were too tired to breast it.
+Error: 虺隤 (false negative, missing term)
+我、姑、酌、彼、金罍，
+Translation: I will now pour a cup from that gilded vase,
+Error: 金罍 (false negative, missing term)
+維、以、不、永、懷。
+Translation: Hoping I may not have to think of him long.
+
+陟、彼、高岡，
+Translation: I was ascending that lofty ridge,
+Error: 高岡 (false negative, missing term)
+我、馬、玄黃，
+Translation: But my horses turned of a dark yellow.
+Error: 玄黃 (false negative, missing term)
+我、姑、酌、彼、兕觥，
+Translation: I will now take a cup from that rhinoceros' horn,
+Error: 兕觥 (false negative, missing term)
+維、以、不、永、傷。
+Translation: Hoping I may not have long to sorrow.
+
+陟、彼、砠、矣，
+Translation: I was ascending that flat-topped height,
+我、馬、瘏、矣，
+Translation: But my horses became quite disabled,
+我、僕、痡、矣，
+Translation: And my servants were [also] disabled.
+云何、吁、矣。
+Translation: Oh! how great is my sorrow!
