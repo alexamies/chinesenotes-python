@@ -395,7 +395,8 @@ For the *Blue Cliff Record*
 ```shell
 python chinesenotes/plot_tokenization_results.py \
   --infile $CORPUS_HOME/data/corpus/analysis/tokenization_training.tsv \
-  --outfile $CORPUS_HOME/data/corpus/analysis/tokenization_training.png
+  --outfile $CORPUS_HOME/data/corpus/analysis/tokenization_training.png \
+  --decision_point -0.507
 ```
 
 ### Training the tokenizer
@@ -405,10 +406,12 @@ whether to accept the token. The scikit-learn
 is used for this.
 
 Install 
-[scikit-learn](https://scikit-learn.org/stable/install.html)
+[scikit-learn](https://scikit-learn.org/stable/install.html) and 
+[graphviz](https://graphviz.gitlab.io/documentation/)
 
 ```shell
 pip install -U scikit-learn
+pip install graphviz
 ```
 
 Run the trainer to the example corpus
@@ -416,7 +419,7 @@ Run the trainer to the example corpus
 ```shell
 python chinesenotes/train_tokenizer.py \
   --infile data/corpus/analysis/shijing_training_example.tsv \
-  --outfile data/corpus/analysis/shijing_training_example.dot
+  --outfile data/corpus/analysis/shijing_example_decision_tree.png
 ```
 
 
@@ -424,14 +427,8 @@ For the *Blue Cliff Record*
 
 ```shell
 python chinesenotes/train_tokenizer.py \
-  --infile $CORPUS_HOME/data/corpus/analysis/tokenization_training.tsv
+  --infile $CORPUS_HOME/data/corpus/analysis/tokenization_training.tsv \
+  --outfile $CORPUS_HOME/data/corpus/analysis/tokenization_decision_tree.svg
 ```
 
-Also, the points with low mutual information may also be added before training.
-
-Write output using graphviz
-
-```shell
-dot -Tps data/corpus/analysis/shijing_training_example.dot -o \
-  data/corpus/analysis/shijing_training_example.ps
-```
+Also, the points with low mutual information can also be added before training.

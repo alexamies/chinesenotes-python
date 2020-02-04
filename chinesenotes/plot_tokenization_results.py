@@ -22,11 +22,19 @@ Plot the result of processing the annotated corpus file
 
 import argparse
 import codecs
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from numpy import random 
 
 
-def PlotResults(infile, outfile):
+def PlotResults(infile, outfile, decision_point):
+  """Plots data
+
+  Args:
+    infile: input file with the data to plot
+    outfile: output file to write chart to
+    decision_point: (optional) Decision point (mutual information) to plot
+  """
   print('Plotting results')
   x1, x2, y = load_training_data(infile)
   print('Loaded {} points'.format(len(x1)))
@@ -43,11 +51,19 @@ def PlotResults(infile, outfile):
   #plt.figure(num=None, figsize=(4, 6))
   plt.subplot(121)
   plt.scatter(x_fn_jitter, x1, c=colors, s=25, marker='^')
+  if decision_point:
+    xd = [-0.1, 1.1]
+    yd = [decision_point, decision_point]
+    plt.plot(xd, yd, color='blue')
   plt.title('All Predictions')
   plt.xlabel('Contains Function Word')
   plt.ylabel('Mutual Information')
   plt.xticks([0, 1], ('False', 'True')) 
   plt.ylim([-3, 20])
+  green_data = mpatches.Patch(color='green', label='Correct')
+  red_data = mpatches.Patch(color='red', label='Incorrect')
+  blue_data = mpatches.Patch(color='blue', label='Decision boundary')
+  plt.legend(handles=[green_data, red_data, blue_data])
   # Only incorrect values
   plt.subplot(122)
   colors = []
@@ -97,8 +113,13 @@ def main():
   parser.add_argument('--outfile',
                       dest='outfile',
                       help='File name to write chart to')
+  parser.add_argument('--decision_point',
+                      dest='decision_point',
+                      type=float,
+                      required=False,
+                      help='Decision point (mutual information)')
   args = parser.parse_args()
-  PlotResults(args.infile, args.outfile)
+  PlotResults(args.infile, args.outfile, args.decision_point)
 
 
 # Entry point from a script

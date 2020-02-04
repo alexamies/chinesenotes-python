@@ -24,8 +24,9 @@ Reads the input file and trains the classifier.
 
 import argparse
 import codecs
+import graphviz
+import matplotlib.pyplot as plt
 from sklearn import tree
-from sklearn.tree.export import export_text
 from sklearn.tree import export_graphviz
 
 def Train(infile, outfile):
@@ -41,9 +42,17 @@ def Train(infile, outfile):
                                     criterion='gini',
                                     min_samples_split=3)
   clf = clf.fit(X, Y)
-  r = export_text(clf)
-  print(r)
-  export_graphviz(clf, out_file = outfile, filled = True, rounded = True)
+  dot_data = tree.export_graphviz(clf, filled = True, rounded = True)
+  graph = graphviz.Source(dot_data) 
+  feature_names = ['Mutual information', 'Has Function Word']
+  class_names = ['Do not accept', 'Accept']
+  tree.plot_tree(clf,
+                 feature_names=feature_names,
+                 class_names=class_names,
+                 filled=True, 
+                 impurity=False)
+  #plt.show()
+  plt.savefig(outfile, dpi=160)
 
 
 def load_training_data(infile):
@@ -59,6 +68,9 @@ def load_training_data(infile):
         term = fields[0]
         mi = float(fields[1])
         has_fn = int(fields[2])
+        has_fn = False
+        if int(fields[2]) == 1:
+          has_fn = True
         y = int(fields[3])
         x = [mi, has_fn]
         X.append(x)
