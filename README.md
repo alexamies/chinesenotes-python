@@ -432,3 +432,168 @@ python chinesenotes/train_tokenizer.py \
 ```
 
 Also, the points with low mutual information can also be added before training.
+
+## Appendix A: Term segmentation analysis data
+The format of the text below is:
+Segmented Chinese text [English no. segments]
+Legend: 
+Error false positive (segmentation incorrectly predicted by the NTI Reader) 
+Error: false positive (not in dictionary on first pass, or not detected)
+English translation is followed by number of segments
+Segments are delimited by Chinese enumeration mark 、
+
+Source (English): Cleary, T 1998, *The Blue Cliff Record*, Berkeley: Numata Center for Buddhist Translation and Research, https://www.bdkamerica.org/book/blue-cliff-record. 
+Source (Chinese): Chong Xian and Ke Qin, 《佛果圜悟禪師碧巖錄》 'The Blue Cliff Record (Biyanlu),' in *Taishō shinshū Daizōkyō* 《大正新脩大藏經》, in Takakusu Junjiro, ed., (Tokyo: Taishō Shinshū Daizōkyō Kankōkai, 1988), Vol. 48, No. 2003, accessed 2020-01-26, http://ntireader.org/taisho/t2003_01.html.  
+Koan 1
+Source: Cleary 1998, pp. 11-12
+
+舉、梁武帝、問、 達磨、大師 
+Story: The Emperor Wu of Liang asked the great teacher Bodhidharma 5
+ (說、這、不、唧𠺕、漢) 
+(Here’s someone talking such nonsense.) 5
+如何、是、聖諦、第一義
+“What is the ultimate meaning of the holy truths?” 4
+ (是、甚、繫驢橛)
+(What donkey-tethering stake is this?) 3
+磨  云。
+Bodhidharma said, 2
+廓然無聖
+“Empty, nothing holy.” 1
+(將、謂、多少、奇特。
+(One might have thought he’d say something extraordinary. 4
+箭、過、新羅。
+The point has already whizzed past. 3
+可、殺、明白)
+It’s quite clear.) 3
+帝、曰。
+The emperor said, 2
+對、朕、者、誰
+“Who is answering me?” 4
+(滿面、慚惶。
+(Filled with embarrassment, 2
+強、惺惺  果然。
+he tries to force himself to be astute. 3
+摸索、不、着)
+After all he gropes without finding.) 3
+磨、云。
+Bodhidharma said, 2
+不識
+“Don’t know.” 1
+(咄。[(Tsk! 1] 再、來、不、直  半、文、錢)
+A second try isn’t worth half a cent.) 7
+帝、不、契
+The emperor didn’t understand. 3
+(可惜、許。
+(Too bad. 2
+却、較、些、子)
+Still, this is getting somewhere.) 4
+達磨、遂、渡江、至、魏( 
+Bodhidharma subsequently crossed the Yangtse River into the kingdom of Wei. 5
+(這、野狐精。
+(Foxy devil! 2
+不免、一、場、懡、㦬。
+He can’t avoid embarrassment. 5
+從、西、過、東。
+He goes from west to east, 4
+從、東、過、西) 
+east to west.) 4
+
+帝、後、舉、問、志、公
+Later the emperor brought this up to Master Zhi and asked him about it. 6
+(貧、兒、思、舊、債。
+(A poor man remembers an old debt. 5
+傍人、有、眼)
+The bystander has eyes.) 3
+志、公、云。
+Master Zhi said, 3
+陛下、還、識、此、人、否
+“Did you recognize the man?” 6
+(和、志、公、趕、出國、始、得。
+(He should drive Master Zhi out of the country too. 7
+好、與、三十、棒。
+He deserves a beating. 4
+達磨、來、也)
+Bodhidharma is here.) 3
+帝、云。
+The emperor said 2
+不識
+he didn’t know him. 1
+(却是、武帝、承當、得、達磨、公案)
+(So after all the Emperor Wu has understood Bodhidharma’s case.) 6
+志、公、云。
+Master Zhi said, 3
+此、是、觀音、大士。
+“He is Mahasattva Avalokitesvara, 4
+傳、佛心印 
+transmitting the seal of the Buddha mind.” 2
+(胡亂、指、注。
+(An arbitrary explanation. 3
+臂膊、不、向、外、曲) 
+The elbow doesn’t bend outwards.) 5
+帝、悔。
+The emperor, regretful, 2
+遂、遣使、去、請
+sent an emissary to invite Bodhidharma back. 4
+(果然、把、不住。
+(After all Wu can’t hold Bodhidharma back; 3
+向、道、不唧、𠺕)
+I told you he was a dunce.) 4
+志、公、云。
+Master Zhi said, 3
+莫道、陛下、發、使、去、取
+“Don’t tell me you’re going to send an emissary to get him!” 6
+(東家、人、死。
+(When someone in the house to the east dies, 3
+西家、人、助、哀。
+someone from the house to the west helps in the mourning. 4
+Error: 西家 (false negative, missing term)
+也好、一時  趕、出國)
+Better they should all be driven out of the country at once.) 4
+闔、國人、去。
+“Even if everyone in the country went, 4
+他、亦、不、回
+he wouldn’t return.” 4
+(志、公、也好、與、三十、棒。
+(Master Zhi again deserves a beating. 6
+不知、脚跟、下放、大、光明)。
+He doesn’t know the great illumination shines forth right where one is.) 5
+Error: 下放 (false positive)
+
+Note: total 199 segments, 2 errors (1 false negative, 1 false positive)
+
+## Appendix B: Calculation of Character Bigram Correlation
+### Pointwise Mutual Information
+The probability p(a, b) can be computed as 
+
+p(a, b)  = [f(ab) + f(ba)] / B
+
+Where f(ab) is the frequency of the character bigram ab, f(ba) is the frequency of character bigram of ba and  B is the total number of character bigrams.
+
+These should be computed over the entire corpus but let’s use Scroll 1 of the Blue Cliff Record for a simple illustration. It is preferable to compute the frequencies over the entire corpus (volumes 1-55 of the Taisho) for more representative statistical values than just the given document in question. 西家 occurs 53 times in the corpus and 家西 occurs 4 times. The corpus is 85,519,494 characters and 83,666,199 character bigrams. 西 occurs 30743 times and . The pointwise mutual information is 
+
+p(西家) = (53 + 4) / 83666199 = 0.0000006665145
+p(西) = 30743 / 83666199 = 0.000367448
+p(家) = 66590 / 83666199 = 0.000795901
+I(西, 家) = log2[0.0000006665145 / (0.000367448 * 0.000795901)] = log2(2.27905) = 1.19
+T value
+The t value for the character bigram 西家 is approximately,
+
+x ~= P(西家) = 53 / 83666199 = 0.0000006334697
+s2 ~= x
+μ = P(西) · P(家) = 0.000367448 * 0.000795901 = 0.0000002924522
+t = [x - μ] / [s2 / N]1/2 
+  = [(0.0000006334697 - 0.0000002924522) / (0.0000006334697 / 85519494)1/2 
+  =  3.96
+Chi Square
+For a 2-by-2 matrix, such as the test for bigram correlation, the chi-square statistic is given by the formula
+
+X2 = N(O11O22 - O12O21) / [(O11 + O12)(O11 + O21)(O12 + O22)(O21 + O22)]
+
+Where N is the total number of bigrams in the corpus and Oij are the values observed each combination of characters i and j. For example, for 西家
+
+O11 = 53 (count for 西 followed by 家)
+O12 = 30743 (count for 西 not followed by 家)
+O21 = 66590 (count for not 西 followed by 家)
+O22 = 85519494 - 66590 - 30743 = 85422161 (count for not 西 followed by not 家)
+X2 = 85519494 * (53 * 85422161 - 30743 * 66590)2 / ((53 + 30743) * (53 + 66590) * (30743 + 85422161) * (66590 + 85422161))
+  = 35.1
