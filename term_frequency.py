@@ -49,7 +49,7 @@ class TermExtractingDoFn(beam.DoFn):
     beam.DoFn.__init__(self)
     cn_home = "https://github.com/alexamies/chinesenotes.com"
     fname = "{}/blob/master/data/words.txt?raw=true".format(cn_home)
-    self.wdict = cndict.OpenDictionary(fname, True)
+    self.wdict = cndict.open_dictionary(fname, True)
     self.term_counter = Metrics.counter(self.__class__, 'terms')
 
   def process(self, element):
@@ -60,7 +60,7 @@ class TermExtractingDoFn(beam.DoFn):
       A list of tokens
     """
     line = element.strip()
-    terms = cndict.Greedy(self.wdict, line)
+    terms = cndict.greedy(self.wdict, line)
     self.term_counter.inc(len(terms))
     return terms
 

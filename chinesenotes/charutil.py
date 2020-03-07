@@ -19,7 +19,7 @@
 """
 Utility for converting traditional to simplified and Pinyin
 """
-from cndict import OpenDictionary
+from cndict import open_dictionary
 
 import argparse
 import os
@@ -61,7 +61,7 @@ def main():
   if "CNREADER_HOME" in os.environ:
     cn_home = os.environ["CNREADER_HOME"]
     fname = "{}/data/words.txt".format(cn_home)
-  wdict = OpenDictionary(fname)
+  wdict = open_dictionary(fname)
   parser = argparse.ArgumentParser()
   parser.add_argument('--tosimplified',
                       dest='tosimplified',

@@ -25,85 +25,83 @@ import argparse
 import codecs
 import logging
 import os
-import sys
 import urllib.request
+from typing import List, Mapping, Union
 
-
-def Greedy(wdict, chunk):
+def greedy(wdict: Mapping[str, Mapping[str, str]], chunk: str) -> List[str]:
   """A greedy tokenizer"""
   segments = []
   i = 0
   while i < len(chunk):
     for j in range(len(chunk), -1, -1):
-      w = chunk[i:j]
-      if w in wdict:
-        segments.append(w)
-        i += len(w)
+      word = chunk[i:j]
+      if word in wdict:
+        segments.append(word)
+        i += len(word)
         break
-      elif len(w) == 1:
-        segments.append(w)
+      if len(word) == 1:
+        segments.append(word)
         i += 1
         break
   return segments
 
 
-def Lookup(wdict, keyword):
-  """Looks up the keyword in the dictionary
+def lookup(wdict: Mapping[str, Mapping[str, Union[List[dict], str]]],
+           keyword: str) -> Mapping[str, Union[List[dict], str]]:
+  """Looks up the keyword in the dictionary or return None if it is not there
   """
-  entry = None
-  if keyword in wdict:
-    entry = wdict[keyword]
-    logging.info("{}".format(entry["english"]))
-  else:
-    logging.info("No entry for {}".format(keyword))
-  return entry
+  return wdict[keyword]
 
 
-def OpenDictionary(fname, chineseOnly = False):
+def open_dictionary(fname: str,
+                    chinese_only=False) -> Mapping[str, Mapping[str, Union[List[dict], str]]]:
   """Reads the dictionary from a file or URL.
 
-    Set chineseOnly = True if you are only using the dictionary to segment
+    Set chinese_only = True if you are only using the dictionary to segment
     Chinese text. This will decrease the memory needed.
 
     Args:
       fname: the file or remote URL to read the dictionary from
-      chineseOnly: Only include Chinese and no other filds
+      chinese_only: Only include Chinese and no other filds
     Returns:
       A dictionary object
   """
-  logging.info("Opening the Chinese Notes dictionary from {}".format(fname))
+  logging.info("Opening the Chinese Notes dictionary from %s", fname)
   if fname.startswith('https'):
-    wdict = load_from_url(fname, chineseOnly)
+    wdict = _load_from_url(fname, chinese_only)
   else:
-    wdict = load_locally(fname, chineseOnly)
-  logging.info("OpenDictionary completed with %d entries" % len(wdict))
+    wdict = _load_locally(fname, chinese_only)
+  logging.info("open_dictionary completed with %d entries", len(wdict))
   return wdict
 
 
-def load_from_url(url, chineseOnly = False):
+def _load_from_url(url: str,
+                   chinese_only=False) -> Mapping[str, Mapping[str, Union[List[dict], str]]]:
   """Reads the dictionary from a local file
   """
   logging.info("Opening the dictionary remotely")
   wdict = {}
-  with urllib.request.urlopen(url) as f:
-    data = f.read().decode('utf-8')
-    wdict = read_dict(data.splitlines(), chineseOnly)
+  with urllib.request.urlopen(url) as dict_file:
+    data = dict_file.read().decode('utf-8')
+    wdict = _read_dict(data.splitlines(), chinese_only)
   return wdict
 
-def load_locally(fname, chineseOnly = False):
+def _load_locally(fname: str,
+                  chinese_only=False) -> Mapping[str, Mapping[str, Union[List[dict], str]]]:
   """Reads the dictionary from a local file
   """
   logging.info("Opening the dictionary from a local file")
   wdict = {}
-  with codecs.open(fname, 'r', "utf-8") as f:
-    wdict = read_dict(f, chineseOnly)
+  with codecs.open(fname, 'r', "utf-8") as dict_file:
+    wdict = _read_dict(dict_file, chinese_only)
   return wdict
 
-def read_dict(f, chineseOnly = False):
+def _read_dict(dict_file: codecs.StreamReaderWriter,
+               chinese_only=False) -> Mapping[str, Mapping[str, Union[List[dict], str]]]:
   """Reads the dictionary from a file object into memory
   """
   wdict = {}
-  for line in f:
+  for line in dict_file:
     line = line.strip()
     if not line:
       continue
@@ -113,7 +111,7 @@ def read_dict(f, chineseOnly = False):
       traditional = fields[2]
       entry['traditional'] = traditional
       entry['simplified'] = fields[1]
-      if not chineseOnly:
+      if not chinese_only:
         entry['id'] = fields[0]
         entry['pinyin'] = fields[3]
         entry['english'] = fields[4]
@@ -138,13 +136,14 @@ def read_dict(f, chineseOnly = False):
 
 
 def main():
+  """Command line entry point"""
   logging.basicConfig(level=logging.INFO)
   cn_home = "https://github.com/alexamies/chinesenotes.com"
   fname = "{}/blob/master/data/words.txt?raw=true".format(cn_home)
   if "CNREADER_HOME" in os.environ:
     cn_home = os.environ["CNREADER_HOME"]
     fname = "{}/data/words.txt".format(cn_home)
-  wdict = OpenDictionary(fname)
+  wdict = open_dictionary(fname)
   parser = argparse.ArgumentParser()
   parser.add_argument('--lookup',
                       dest='lookup',
@@ -154,11 +153,11 @@ def main():
                       help='Segment the text into multi-character terms')
   args = parser.parse_args()
   if args.lookup:
-    entry = Lookup(wdict, args.lookup)
+    entry = lookup(wdict, args.lookup)
     print("English: {}".format(entry["english"]))
   elif args.tokenize:
     logging.info("Greedy dictionary-based text segmentation")
-    segments = Greedy(wdict, args.tokenize)
+    segments = greedy(wdict, args.tokenize)
     print("Segments: {}".format(segments))
 
 # Entry point from a script
