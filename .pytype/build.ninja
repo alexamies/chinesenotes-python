@@ -1,9 +1,0 @@
-rule infer
-  command = /home/jifusfo/chinesenotes-python/venv/bin/python3 -m pytype.single --imports_info $imports --module-name $module -V 3.5 -o $out --no-report-errors --nofail --quick $in
-  description = infer $module
-rule check
-  command = /home/jifusfo/chinesenotes-python/venv/bin/python3 -m pytype.single --imports_info $imports --module-name $module -V 3.5 -o $out --analyze-annotated --nofail --quick $in
-  description = check $module
-build /home/jifusfo/chinesenotes-python/.pytype/pyi/chinesenotes/cndict.pyi: check /home/jifusfo/chinesenotes-python/chinesenotes/cndict.py
-  imports = /home/jifusfo/chinesenotes-python/.pytype/imports/chinesenotes.cndict.imports
-  module = chinesenotes.cndict

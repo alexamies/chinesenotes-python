@@ -1,7 +1,8 @@
+__pycache__/
+.pytype/
 beam*/
 chinesenotes.egg-info/
-__pycache__/
-tmp/
-venv/
 credentials.json
 outputs*
+tmp/
+venv/
