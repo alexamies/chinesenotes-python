@@ -46,24 +46,24 @@ INFO:root:Chunk: 東家人死。西家人助哀。
 INFO:root:Segments: ['東家', '人', '死', '。', '西家', '人', '助', '哀', '。']
 ```
 
-## Converting between simplified and traditionl
+## Converting between simplified and traditional
 
 To convert traditional to simplified
 
 ```shell
-python chinesenotes/charutil.py --tosimplified "四種廣說"
+python3 main.py --tosimplified "四種廣說"
 ```
 
 To convert to traditional
 
 ```shell
-python chinesenotes/charutil.py --totraditional "操作系统"
+python3 chinesenotes/charutil.py --totraditional "操作系统"
 ```
 
 To get pinyin
 
 ```shell
-python chinesenotes/charutil.py --topinyin "操作系统"
+python3 chinesenotes/charutil.py --topinyin "操作系统"
 ```
 
 ## Text analysis

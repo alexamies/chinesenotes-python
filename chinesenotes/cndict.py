@@ -28,6 +28,43 @@ import os
 import urllib.request
 from typing import List, Mapping, Union
 
+PINYIN_CONVERSION = {'ā': ('a', 1), 'á': ('a', 2), 'ǎ': ('a', 3), 'à': ('a', 4),
+                     'ē': ('e', 1), 'é': ('e', 2), 'ě': ('e', 3), 'è': ('e', 4),
+                     'ī': ('i', 1), 'í': ('i', 2), 'ǐ': ('i', 3), 'ì': ('i', 4),
+                     'ō': ('o', 1), 'ó': ('o', 2), 'ǒ': ('o', 3), 'ò': ('o', 4),
+                     'ū': ('u', 1), 'ú': ('u', 2), 'ǔ': ('u', 3), 'ù': ('u', 4)}
+
+
+def convert_to_cccedict(infile: str, outfile: str):
+  """Converts the Chinese Notes dictionary from native format to CC-CEDICT
+
+  Since there are utilities available that use the CC-CEDICT format, it can be
+  useful to have the dicitonary in that format.
+  """
+  wdict = open_dictionary(infile)
+  with open(outfile, 'w') as outf:
+    done = set()
+    for key in wdict:
+      entry = wdict[key]
+      simplified = entry['simplified']
+      traditional = entry['traditional']
+      if traditional == '\\N':
+        traditional = simplified
+      if simplified in done or traditional in done:
+        continue
+      pinyin = entry['pinyin']
+      pinyin = _convert_pinyin_numeric(simplified, wdict)
+      english = entry['english']
+      if english == '\\N':
+        continue
+      outf.write('{} {} [{}] /{}/\n'.format(traditional,
+                                            simplified,
+                                            pinyin,
+                                            english))
+      done.add(simplified)
+      done.add(traditional)
+
+
 def greedy(wdict: Mapping[str, Mapping[str, str]], chunk: str) -> List[str]:
   """A greedy tokenizer"""
   segments = []
@@ -134,6 +171,32 @@ def _read_dict(dict_file: codecs.StreamReaderWriter,
             wdict[traditional] = entry
   return wdict
 
+def _convert_pinyin_numeric(simplified: str,
+                            wdict: Mapping[str, Mapping[str, Union[List[dict], str]]]) -> str:
+  """Convert pinyin from a format like ā to a1 with spaces between the syllables
+
+  For example, fēnsàn -> fen1 san4
+  """
+  new_pinyin = []
+  for character in simplified:
+    if character not in wdict:
+      continue
+    term = wdict[character]
+    pinyini = term['pinyin']
+    new_char_pinyin = []
+    tone_number = ''
+    for letter in pinyini:
+      tone_number = ''
+      if letter in PINYIN_CONVERSION:
+        regular_letter = PINYIN_CONVERSION[letter][0]
+        tone_number = str(PINYIN_CONVERSION[letter][1])
+        new_char_pinyin.append(regular_letter)
+      else:
+        new_char_pinyin.append(letter)
+    new_char_pinyin.append(tone_number)
+    new_pinyin.append(''.join(new_char_pinyin))
+  return ' '.join(new_pinyin)
+
 
 def main():
   """Command line entry point"""
@@ -151,14 +214,22 @@ def main():
   parser.add_argument('--tokenize',
                       dest='tokenize',
                       help='Segment the text into multi-character terms')
+  parser.add_argument('--convert',
+                      dest='convert',
+                      help='Convert to CC-CEDICT format with given output file')
   args = parser.parse_args()
   if args.lookup:
     entry = lookup(wdict, args.lookup)
-    print("English: {}".format(entry["english"]))
+    print('English: {}'.format(entry['english']))
   elif args.tokenize:
-    logging.info("Greedy dictionary-based text segmentation")
+    logging.info('Greedy dictionary-based text segmentation')
     segments = greedy(wdict, args.tokenize)
-    print("Segments: {}".format(segments))
+    print('Segments: {}'.format(segments))
+  elif args.convert:
+    logging.info('Converting to CC-CEDICT format with output file '
+                 '{}'.format(args.convert))
+    convert_to_cccedict(fname, args.convert)
+    print('Done')
 
 # Entry point from a script
 if __name__ == "__main__":

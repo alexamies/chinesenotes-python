@@ -19,11 +19,6 @@
 """
 Utility for converting traditional to simplified and Pinyin
 """
-from cndict import open_dictionary
-
-import argparse
-import os
-import sys
 
 def ToSimplified(wdict, trad):
   simplified = u""
@@ -49,40 +44,7 @@ def ToTraditional(wdict, chinese):
       entry = wdict[c]
       s = entry['simplified']
       t = entry['traditional']
-      if t ==  "\\N":
+      if t == "\\N":
         t = s
       traditional += t
   return traditional
-
-# For use from command line
-def main():
-  cn_home = "https://github.com/alexamies/chinesenotes.com"
-  fname = "{}/blob/master/data/words.txt?raw=true".format(cn_home)
-  if "CNREADER_HOME" in os.environ:
-    cn_home = os.environ["CNREADER_HOME"]
-    fname = "{}/data/words.txt".format(cn_home)
-  wdict = open_dictionary(fname)
-  parser = argparse.ArgumentParser()
-  parser.add_argument('--tosimplified',
-                      dest='tosimplified',
-                      help='Convert the given traditional text to simplified')
-  parser.add_argument('--totraditional',
-                      dest='totraditional',
-                      help='Convert the given simplified text to traditional')
-  parser.add_argument('--topinyin',
-                      dest='topinyin',
-                      help='Convert the given text to topinyin')
-  args = parser.parse_args()
-  if args.tosimplified:
-    s, t, p = ToSimplified(wdict, args.tosimplified)
-    print(u"Simplified: {}".format(s))
-  elif args.totraditional:
-    trad = ToTraditional(wdict, args.totraditional)
-    print(u"Traditional: %s" % trad)
-  elif args.topinyin:
-    s, t, p = ToSimplified(wdict, args.topinyin)
-    print(u"Pinyin: {}".format(p))
-
-
-if __name__ == "__main__":
-  main()

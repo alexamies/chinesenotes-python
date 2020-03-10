@@ -16,3 +16,5 @@
 #
 
 from __future__ import absolute_import
+
+"""Package for Chinese text processing"""
