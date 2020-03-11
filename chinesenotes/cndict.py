@@ -227,7 +227,7 @@ def main():
     print('Segments: {}'.format(segments))
   elif args.convert:
     logging.info('Converting to CC-CEDICT format with output file '
-                 '{}'.format(args.convert))
+                 '%s', args.convert)
     convert_to_cccedict(fname, args.convert)
     print('Done')
 

@@ -57,13 +57,13 @@ python3 main.py --tosimplified "四種廣說"
 To convert to traditional
 
 ```shell
-python3 chinesenotes/charutil.py --totraditional "操作系统"
+python3 main.py --totraditional "操作系统"
 ```
 
 To get pinyin
 
 ```shell
-python3 chinesenotes/charutil.py --topinyin "操作系统"
+python3 main.py --topinyin "操作系统"
 ```
 
 ## Text analysis

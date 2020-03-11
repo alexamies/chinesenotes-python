@@ -45,13 +45,13 @@ def main():
                       help='Convert the given text to topinyin')
   args = parser.parse_args()
   if args.tosimplified:
-    simplified, _, _ = charutil.ToSimplified(wdict, args.tosimplified)
+    simplified, _, _ = charutil.to_simplified(wdict, args.tosimplified)
     print(u"Simplified: {}".format(simplified))
   elif args.totraditional:
-    trad = charutil.ToTraditional(wdict, args.totraditional)
+    trad = charutil.to_traditional(wdict, args.totraditional)
     print(u"Traditional: %s" % trad)
   elif args.topinyin:
-    _, _, pinyin = charutil.ToSimplified(wdict, args.topinyin)
+    _, _, pinyin = charutil.to_simplified(wdict, args.topinyin)
     print(u"Pinyin: {}".format(pinyin))
 
 
