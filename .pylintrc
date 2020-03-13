@@ -1,2 +1,5 @@
 [FORMAT]
 indent-string='  '
+
+[LOGGING]
+logging-format-style=new

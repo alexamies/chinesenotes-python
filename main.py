@@ -27,11 +27,11 @@ from chinesenotes import charutil, cndict
 
 def main():
   """For use from command line"""
-  cn_home = "https://github.com/alexamies/chinesenotes.com"
-  fname = "{}/blob/master/data/words.txt?raw=true".format(cn_home)
+  cn_home = 'https://github.com/alexamies/chinesenotes.com'
+  fname = '{cn_home}/blob/master/data/words.txt?raw=true'
   if "CNREADER_HOME" in os.environ:
-    cn_home = os.environ["CNREADER_HOME"]
-    fname = "{}/data/words.txt".format(cn_home)
+    cn_home = os.environ['CNREADER_HOME']
+    fname = f'{cn_home}/data/words.txt'
   wdict = cndict.open_dictionary(fname)
   parser = argparse.ArgumentParser()
   parser.add_argument('--tosimplified',
@@ -46,15 +46,15 @@ def main():
   args = parser.parse_args()
   if args.tosimplified:
     simplified, _, _ = charutil.to_simplified(wdict, args.tosimplified)
-    print(u"Simplified: {}".format(simplified))
+    print(f'Simplified: {simplified}')
   elif args.totraditional:
     trad = charutil.to_traditional(wdict, args.totraditional)
-    print(u"Traditional: %s" % trad)
+    print(f'Traditional: {trad}')
   elif args.topinyin:
     _, _, pinyin = charutil.to_simplified(wdict, args.topinyin)
-    print(u"Pinyin: {}".format(pinyin))
+    print(f'Pinyin: {pinyin}')
 
 
 # Command line entry point
-if __name__ == "__main__":
+if __name__ == '__main__':
   main()

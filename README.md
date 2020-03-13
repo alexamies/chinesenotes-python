@@ -1,6 +1,18 @@
 # Chinese Notes Python Utilities
 Python utilities for Chinese Notes Chinese-English dictionary
 
+Prerequisite: Python 3.6+
+
+Create a virtual environment
+
+```shell
+python3 -m venv venv
+source venv/bin/activate
+```
+
+Install software and activate again when coming back.
+
+
 ## Use the dictionary
 
 From a directory above chinesenotes-python, clone the chinesenots.com project
@@ -18,7 +30,7 @@ export CNREADER_HOME=$HOME/chinesenotes.com
 Lookup a word in the dictionary
 
 ```shell
-python3 chinesenotes/cndict.py --lookup "你好"
+python3 -m chinesenotes.cndict --lookup "你好"
 ```
 
 You should see output like
@@ -33,7 +45,7 @@ INFO:root:hello
 Same as above for environment setup. To run the utility:
 
 ```shell
-python3 chinesenotes/cndict.py --tokenize "東家人死。西家人助哀。"
+python3 -m chinesenotes.cndict --tokenize "東家人死。西家人助哀。"
 ```
 
 You should see output like
@@ -96,15 +108,6 @@ INPUT_BUCKET=ntinreader-text
 OUTPUT_BUCKET=ntinreader-analysis
 PROJECT=[your project]
 ```
-
-Create a virtual environment
-
-```shell
-python3 -m venv venv
-source venv/bin/activate
-```
-
-Install software and activate again when coming back.
 
 ### Character frequency analysis
 
@@ -432,6 +435,13 @@ python chinesenotes/train_tokenizer.py \
 ```
 
 Also, the points with low mutual information can also be added before training.
+
+## Testing
+
+Run unit tests with the command
+```shell
+python -m unittest discover -s tests -p "*_test.py"
+```
 
 ## Appendix A: Term segmentation analysis data
 The format of the text below is:

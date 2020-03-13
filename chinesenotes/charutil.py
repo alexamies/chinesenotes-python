@@ -34,13 +34,13 @@ def to_simplified(wdict, trad):
       simplified += char
       pinyin += ' '
   if simplified == trad:
-    traditional = "\\N"
+    traditional = '\\N'
   return simplified, traditional, pinyin.lower()
 
 
 def to_traditional(wdict, chinese):
   """Convert to traditional Chinese characters"""
-  traditional = ""
+  traditional = ''
   for char in chinese:
     if char in wdict:
       entry = wdict[char]
@@ -49,4 +49,6 @@ def to_traditional(wdict, chinese):
       if trad == "\\N":
         trad = simplified
       traditional += trad
+    else:
+      traditional += char
   return traditional
