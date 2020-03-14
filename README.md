@@ -34,7 +34,7 @@ export CNREADER_HOME=$HOME/chinesenotes.com
 Lookup a word in the dictionary
 
 ```shell
-python3 -m chinesenotes.cndict --lookup "你好"
+python -m chinesenotes.cndict --lookup "你好"
 ```
 
 You should see output like
@@ -49,7 +49,7 @@ INFO:root:hello
 Same as above for environment setup. To run the utility:
 
 ```shell
-python3 -m chinesenotes.cndict --tokenize "東家人死。西家人助哀。"
+python -m chinesenotes.cndict --tokenize "東家人死。西家人助哀。"
 ```
 
 You should see output like
@@ -67,20 +67,25 @@ INFO:root:Segments: ['東家', '人', '死', '。', '西家', '人', '助', '哀
 To convert traditional to simplified
 
 ```shell
-python3 main.py --tosimplified "四種廣說"
+python main.py --tosimplified "四種廣說"
 ```
 
 To convert to traditional
 
 ```shell
-python3 main.py --totraditional "操作系统"
+python main.py --totraditional "操作系统"
 ```
 
 To get pinyin
 
 ```shell
-python3 main.py --topinyin "操作系统"
+python main.py --topinyin "操作系统"
 ```
+
+### Colab Notebook
+
+The Colab notebook to add new words is at (open with Chrome)
+http://colab.research.google.com/github/alexamies/chinesenotes-python/blob/master/add_mod_entry.ipynb
 
 ## Text analysis
 
@@ -89,6 +94,10 @@ The text analysis programs require the Apache Beam Python SDK. See
 [Apache Beam Python SDK Quickstart](https://beam.apache.org/get-started/quickstart-py/)
 for details on running Apache Beam . You can run it locally or on the cloud 
 Google Cloud Dataflow or another implementation.
+
+```shell
+pip install apache-beam
+```
 
 A small corpus of Chinese texts is included in this repo. To run this on a full
 corpus download either the Chinese Notes corpus of literary Chinese
@@ -146,6 +155,7 @@ Move the results to a convenient location
 
 ```shell
 cat output* > data/corpus/analysis/char_freq.tsv 
+rm output*
 ```
 
 Run with Dataflow. You will need to copy the corpus text files into GCS first.
@@ -329,7 +339,7 @@ python chinesenotes/mutualinfo.py \
   --output_file $CORPUS_HOME/index/mutual_info.tsv
 ```
 
-Filter to specific terms, for example, the terms in the Blue Cliff Record,
+Filter to specific terms, for example, the terms in the *Blue Cliff Record*,
 Scroll 1:
 
 ```shell

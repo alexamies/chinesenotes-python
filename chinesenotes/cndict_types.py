@@ -124,7 +124,9 @@ class DictionaryEntry:
     pin = set()
     for sense in self._senses:
   	  pin.add(sense.pinyin)
-    return ', '.join(pin)
+    plist = list(pin)
+    plist.sort()
+    return ', '.join(plist)
 
   @property
   def senses(self) -> List[WordSense]:

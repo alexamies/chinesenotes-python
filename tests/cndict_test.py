@@ -19,6 +19,7 @@
 Unit tests for chinesenotes.cndict
 """
 
+import io
 import unittest
 
 from chinesenotes import cndict
@@ -29,8 +30,30 @@ class TestCNDict(unittest.TestCase):
     """Empty dictionary"""
     trad = '四種廣說'
     wdict = {}
-    segments = cndict.greedy(wdict, trad)
+    segments = cndict.tokenize_greedy(wdict, trad)
     self.assertEqual(len(segments), len(trad))
+
+  def test_load_dictionary0(self):
+    """Empty dictionary"""
+    trad = '說'
+    luid = '1'
+    hwid = '1'
+    simplified = '说'
+    pinyin = 'shuō'
+    english = 'say'
+    grammar = 'say'
+    nn = '\\N\t\\N'
+    note = 'hello'
+    line = (f'{luid}\t{simplified}\t{trad}\t{pinyin}\t{english}\t{grammar}\t'
+             '{nn}\t{nn}\t{nn}\t{nn}\t{note}\t{hwid}\n')
+    dict_file = io.StringIO(line)
+    wdict = {}
+    wdict = cndict._load_dictionary(dict_file)
+    self.assertEqual(len(wdict), 2) # Indexed both by simplified and traditional
+    entry = wdict[trad]
+    self.assertEqual(entry.simplified, simplified)
+    self.assertEqual(entry.pinyin, pinyin)
+    self.assertEqual(entry.english, english)
 
 
 if __name__ == '__main__':

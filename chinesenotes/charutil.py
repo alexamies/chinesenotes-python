@@ -28,8 +28,8 @@ def to_simplified(wdict, trad):
   for char in trad:
     if char in wdict:
       entry = wdict[char]
-      simplified += entry['simplified']
-      pinyin += entry['pinyin']
+      simplified += entry.simplified
+      pinyin += entry.pinyin
     else:
       simplified += char
       pinyin += ' '
@@ -44,8 +44,8 @@ def to_traditional(wdict, chinese):
   for char in chinese:
     if char in wdict:
       entry = wdict[char]
-      simplified = entry['simplified']
-      trad = entry['traditional']
+      simplified = entry.simplified
+      trad = entry.traditional
       if trad == "\\N":
         trad = simplified
       traditional += trad

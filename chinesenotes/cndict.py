@@ -22,13 +22,13 @@ Utility loads the Chinese Notes Reader dictionary into a Python dictionary.
 Simplified and traditional words are keys.
 """
 import argparse
-import codecs
 import logging
 import os
 import urllib.request
-from typing import List, Mapping, Union
+from typing import List, Mapping, TextIO
 
-from chinesenotes import cndict_types
+from chinesenotes.cndict_types import DictionaryEntry
+from chinesenotes.cndict_types import WordSense
 
 PINYIN_CONVERSION = {'ā': ('a', 1), 'á': ('a', 2), 'ǎ': ('a', 3), 'à': ('a', 4),
                      'ē': ('e', 1), 'é': ('e', 2), 'ě': ('e', 3), 'è': ('e', 4),
@@ -43,7 +43,7 @@ def convert_to_cccedict(infile: str, outfile: str):
   Since there are utilities available that use the CC-CEDICT format, it can be
   useful to have the dicitonary in that format.
   """
-  wdict = load_dictionary(infile)
+  wdict = open_dictionary(infile)
   with open(outfile, 'w') as outf:
     done = set()
     for key in wdict:
@@ -64,92 +64,15 @@ def convert_to_cccedict(infile: str, outfile: str):
       done.add(traditional)
 
 
-def greedy(wdict: Mapping[str, Mapping[str, str]], chunk: str) -> List[str]:
-  """A greedy tokenizer"""
-  segments = []
-  i = 0
-  while i < len(chunk):
-    for j in range(len(chunk), -1, -1):
-      word = chunk[i:j]
-      if word in wdict:
-        segments.append(word)
-        i += len(word)
-        break
-      if len(word) == 1:
-        segments.append(word)
-        i += 1
-        break
-  return segments
-
-
-def load_dictionary(fname: str,
-                    chinese_only=False) -> Mapping[str, cndict_types.DictionaryEntry]:
-  """Loads the dictionary from a file or URL.
-
-    Set chinese_only = True if you are only using the dictionary to segment
-    Chinese text. This will decrease the memory needed.
-
-    Args:
-      fname: the file or remote URL to read the dictionary from
-      chinese_only: Only include Chinese and no other fields
-    Returns:
-      A dictionary of DictionaryEntry objects
-  """
-  wdict = {}
-  with open(fname, 'r') as dict_file:
-    for line in dict_file:
-      line = line.strip()
-      if not line:
-        continue
-      fields = line.split('\t')
-      if fields and len(fields) >= 10:
-        traditional = fields[2]
-        simplified = fields[1]
-        pinyin = None
-        english = None
-        grammar = None
-        notes = None
-        headword_id = None
-        if not chinese_only:
-          pinyin = fields[3]
-          english = fields[4]
-          grammar = fields[5]
-          if len(fields) >= 14 and fields[14] != '\\N':
-            notes = fields[14]
-          if fields and len(fields) >= 15 and fields[15] != '\\N':
-            headword_id = fields[15]
-        sense = cndict_types.WordSense(simplified, traditional, pinyin, english)
-        if grammar:
-          sense.grammar = grammar
-        if notes:
-          sense.notes = notes
-        key = simplified
-        if key not in wdict:
-          entry = cndict_types.DictionaryEntry(simplified, [sense], headword_id)
-          wdict[key] = entry
-        else:
-          # Entry is in dict, append the word sense
-          entry = wdict[key]
-          entry.add_word_sense(sense)
-        if traditional != '\\N' and traditional not in wdict:
-          # Also index by traditional
-          entry = cndict_types.DictionaryEntry(traditional, [sense], headword_id)
-          wdict[traditional] = entry
-        elif traditional != '\\N':
-          entry = wdict[traditional]
-          entry.add_word_sense(sense)
-  return wdict
-
-
-def lookup(wdict: Mapping[str, Mapping[str, Union[List[dict], str]]],
-           keyword: str) -> Mapping[str, Union[List[dict], str]]:
+def lookup(wdict: Mapping[str, DictionaryEntry],
+           keyword: str) -> DictionaryEntry:
   """Looks up the keyword in the dictionary or return None if it is not there
   """
   return wdict[keyword]
 
 
 def open_dictionary(fname: str,
-                    chinese_only=False) -> Mapping[str, Mapping[str, Union[List[dict], str]]]:
+                    chinese_only=False) -> Mapping[str, DictionaryEntry]:
   """Reads the dictionary from a file or URL.
 
     Set chinese_only = True if you are only using the dictionary to segment
@@ -170,30 +93,37 @@ def open_dictionary(fname: str,
   return wdict
 
 
-def _load_from_url(url: str,
-                   chinese_only=False) -> Mapping[str, Mapping[str, Union[List[dict], str]]]:
-  """Reads the dictionary from a local file
-  """
-  logging.info('Opening the dictionary remotely')
-  wdict = {}
-  with urllib.request.urlopen(url) as dict_file:
-    data = dict_file.read().decode('utf-8')
-    wdict = _read_dict(data.splitlines(), chinese_only)
-  return wdict
+def tokenize_greedy(wdict: Mapping[str, DictionaryEntry],
+                    chunk: str) -> List[str]:
+  """A greedy tokenizer"""
+  segments = []
+  i = 0
+  while i < len(chunk):
+    for j in range(len(chunk), -1, -1):
+      word = chunk[i:j]
+      if word in wdict:
+        segments.append(word)
+        i += len(word)
+        break
+      if len(word) == 1:
+        segments.append(word)
+        i += 1
+        break
+  return segments
 
-def _load_locally(fname: str,
-                  chinese_only=False) -> Mapping[str, Mapping[str, Union[List[dict], str]]]:
-  """Reads the dictionary from a local file
-  """
-  logging.info('Opening the dictionary from a local file')
-  wdict = {}
-  with codecs.open(fname, 'r', 'utf-8') as dict_file:
-    wdict = _read_dict(dict_file, chinese_only)
-  return wdict
 
-def _read_dict(dict_file: codecs.StreamReaderWriter,
-               chinese_only=False) -> Mapping[str, Mapping[str, Union[List[dict], str]]]:
-  """Reads the dictionary from a file object into memory
+def _load_dictionary(dict_file: TextIO,
+                     chinese_only=False) -> Mapping[str, DictionaryEntry]:
+  """Loads the dictionary from a file or URL.
+
+    Set chinese_only = True if you are only using the dictionary to segment
+    Chinese text. This will decrease the memory needed.
+
+    Args:
+      fname: the file or remote URL to read the dictionary from
+      chinese_only: Only include Chinese and no other fields
+    Returns:
+      A dictionary of DictionaryEntry objects
   """
   wdict = {}
   for line in dict_file:
@@ -202,35 +132,62 @@ def _read_dict(dict_file: codecs.StreamReaderWriter,
       continue
     fields = line.split('\t')
     if fields and len(fields) >= 10:
-      entry = {}
       traditional = fields[2]
-      entry['traditional'] = traditional
-      entry['simplified'] = fields[1]
+      simplified = fields[1]
+      pinyin = None
+      english = None
+      grammar = None
+      notes = None
+      headword_id = None
       if not chinese_only:
-        entry['id'] = fields[0]
-        entry['pinyin'] = fields[3]
-        entry['english'] = fields[4]
-        entry['grammar'] = fields[5]
-        if fields and len(fields) >= 15 and fields[14] != '\\N':
-          entry['notes'] = fields[14]
-      key = entry['simplified']
+        pinyin = fields[3]
+        english = fields[4]
+        grammar = fields[5]
+        if len(fields) >= 14 and fields[14] != '\\N':
+          notes = fields[14]
+        if fields and len(fields) >= 15 and fields[15] != '\\N':
+          headword_id = fields[15]
+      sense = WordSense(simplified, traditional, pinyin, english)
+      if grammar:
+        sense.grammar = grammar
+      if notes:
+        sense.notes = notes
+      key = simplified
       if key not in wdict:
-        entry['other_entries'] = []
+        entry = DictionaryEntry(simplified, [sense], headword_id)
         wdict[key] = entry
-        if traditional != '\\N':
-          wdict[traditional] = entry
       else:
-        wdict[key]['other_entries'].append(entry)
-        if traditional != '\\N':
-          if traditional in wdict:
-            wdict[traditional]['other_entries'].append(entry)
-          else:
-            entry['other_entries'] = []
-            wdict[traditional] = entry
+        # Entry is in dict, append the word sense
+        entry = wdict[key]
+        entry.add_word_sense(sense)
+      if traditional != '\\N' and traditional not in wdict:
+        # Also index by traditional
+        entry = DictionaryEntry(traditional, [sense], headword_id)
+        wdict[traditional] = entry
+      elif traditional != '\\N':
+        entry = wdict[traditional]
+        entry.add_word_sense(sense)
   return wdict
 
+def _load_from_url(url: str,
+                   chinese_only=False) -> Mapping[str, DictionaryEntry]:
+  """Reads the dictionary from a local file
+  """
+  logging.info('Opening the dictionary remotely')
+  with urllib.request.urlopen(url) as dict_file:
+    data = dict_file.read().decode('utf-8')
+    return _load_dictionary(data.splitlines(), chinese_only)
+
+def _load_locally(fname: str,
+                  chinese_only=False) -> Mapping[str, DictionaryEntry]:
+  """Reads the dictionary from a local file
+  """
+  logging.info('Opening dictionary from local file ')
+  with open(fname, 'r') as dict_file:
+    return _load_dictionary(dict_file, chinese_only)
+
 def _convert_pinyin_numeric(simplified: str,
-                            wdict: Mapping[str, cndict_types.DictionaryEntry]) -> str:
+                            wdict: Mapping[str, DictionaryEntry]) -> str:
   """Convert pinyin from a format like ā to a1 with spaces between the syllables
 
   For example, fēnsàn -> fen1 san4
@@ -278,7 +235,6 @@ def main():
                       help='Convert to CC-CEDICT format with given output file')
   args = parser.parse_args()
   if args.lookup:
-    wdict = load_dictionary(fname)
     entry = lookup(wdict, args.lookup)
     senses = entry.senses
     if not senses:
@@ -287,7 +243,7 @@ def main():
     print(f'English: {english}')
   elif args.tokenize:
     logging.info('Greedy dictionary-based text segmentation')
-    segments = greedy(wdict, args.tokenize)
+    segments = tokenize_greedy(wdict, args.tokenize)
     print(f'Segments: {segments}')
   elif args.convert:
     logging.info('Converting to CC-CEDICT format with output file '

@@ -98,7 +98,7 @@ def run(argv=None, save_main_session=True):
   parser = argparse.ArgumentParser()
   parser.add_argument('--corpus_home',
                       dest='corpus_home',
-                      help='The directory or bucke of the corpus home')
+                      help='The directory or bucket of the corpus home')
   parser.add_argument('--input',
                       dest='input',
                       help='A single input file')

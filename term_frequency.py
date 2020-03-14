@@ -60,7 +60,7 @@ class TermExtractingDoFn(beam.DoFn):
       A list of tokens
     """
     line = element.strip()
-    terms = cndict.greedy(self.wdict, line)
+    terms = cndict.tokenize_greedy(self.wdict, line)
     self.term_counter.inc(len(terms))
     return terms
 
