@@ -43,26 +43,23 @@ def convert_to_cccedict(infile: str, outfile: str):
   Since there are utilities available that use the CC-CEDICT format, it can be
   useful to have the dicitonary in that format.
   """
-  wdict = open_dictionary(infile)
+  wdict = load_dictionary(infile)
   with open(outfile, 'w') as outf:
     done = set()
     for key in wdict:
       entry = wdict[key]
-      simplified = entry['simplified']
-      traditional = entry['traditional']
+      simplified = entry.simplified
+      traditional = entry.traditional
       if traditional == '\\N':
         traditional = simplified
       if simplified in done or traditional in done:
         continue
-      pinyin = entry['pinyin']
+      pinyin = entry.pinyin
       pinyin = _convert_pinyin_numeric(simplified, wdict)
-      english = entry['english']
+      english = entry.english
       if english == '\\N':
         continue
-      outf.write('{} {} [{}] /{}/\n'.format(traditional,
-                                            simplified,
-                                            pinyin,
-                                            english))
+      outf.write(f'{traditional} {simplified} [{pinyin}] /{english}/\n')
       done.add(simplified)
       done.add(traditional)
 
@@ -233,7 +230,7 @@ def _read_dict(dict_file: codecs.StreamReaderWriter,
   return wdict
 
 def _convert_pinyin_numeric(simplified: str,
-                            wdict: Mapping[str, Mapping[str, Union[List[dict], str]]]) -> str:
+                            wdict: Mapping[str, cndict_types.DictionaryEntry]) -> str:
   """Convert pinyin from a format like ā to a1 with spaces between the syllables
 
   For example, fēnsàn -> fen1 san4
@@ -243,7 +240,7 @@ def _convert_pinyin_numeric(simplified: str,
     if character not in wdict:
       continue
     term = wdict[character]
-    pinyini = term['pinyin']
+    pinyini = term.pinyin
     new_char_pinyin = []
     tone_number = ''
     for letter in pinyini:

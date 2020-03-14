@@ -12,8 +12,12 @@ source venv/bin/activate
 
 Install software and activate again when coming back.
 
+## Basic dictionary and text utilities
 
-## Use the dictionary
+You can use the chinesenotes Python package for basic command line utilities
+as described here.
+
+### Use the dictionary
 
 From a directory above chinesenotes-python, clone the chinesenots.com project
 
@@ -40,7 +44,7 @@ INFO:root:OpenDictionary completed with 141896 entries
 INFO:root:hello
 ```
 
-## Text Segmentation
+### Text Segmentation
 
 Same as above for environment setup. To run the utility:
 
@@ -58,7 +62,7 @@ INFO:root:Chunk: 東家人死。西家人助哀。
 INFO:root:Segments: ['東家', '人', '死', '。', '西家', '人', '助', '哀', '。']
 ```
 
-## Converting between simplified and traditional
+### Converting between simplified and traditional
 
 To convert traditional to simplified
 

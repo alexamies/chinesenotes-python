@@ -38,6 +38,80 @@ class DictionaryEntryTest(unittest.TestCase):
     senses = entry.senses
     self.assertEqual(len(senses), 1)
 
+  def test_english1(self):
+    """Add a new sense to a DictionaryEntry object"""
+    trad = '說'
+    hwid = '1'
+    simplified = '说'
+    pinyin = 'shuō'
+    english = 'say'
+    sense = cndict_types.WordSense(simplified, trad, pinyin, english)
+    entry = cndict_types.DictionaryEntry(trad, [sense], hwid)
+    self.assertEqual(entry.english, english)
+
+  def test_english2(self):
+    """Add a new sense to a DictionaryEntry object"""
+    trad = '說'
+    hwid = '1'
+    simplified = '说'
+    pinyin = 'shuō'
+    english1 = 'say'
+    sense1 = cndict_types.WordSense(simplified, trad, pinyin, english1)
+    english2 = 'explain'
+    sense2 = cndict_types.WordSense(simplified, trad, pinyin, english2)
+    entry = cndict_types.DictionaryEntry(trad, [sense1, sense2], hwid)
+    self.assertEqual(entry.english, '1. say; 2. explain')
+
+  def test_pinyin1(self):
+    """Add a new sense to a DictionaryEntry object"""
+    trad = '說'
+    hwid = '1'
+    simplified = '说'
+    pinyin = 'shuō'
+    english = 'say'
+    sense = cndict_types.WordSense(simplified, trad, pinyin, english)
+    entry = cndict_types.DictionaryEntry(trad, [sense], hwid)
+    self.assertEqual(entry.pinyin, pinyin)
+
+  def test_pinyin2(self):
+    """Add a new sense to a DictionaryEntry object"""
+    trad = '說'
+    hwid = '1'
+    simplified = '说'
+    pinyin1 = 'shuō'
+    english1 = 'say'
+    sense1 = cndict_types.WordSense(simplified, trad, pinyin1, english1)
+    pinyin2 = 'yuè'
+    english2 = 'speak'
+    sense2 = cndict_types.WordSense(simplified, trad, pinyin2, english2)
+    'yuè'
+    entry = cndict_types.DictionaryEntry(trad, [sense1, sense2], hwid)
+    self.assertEqual(entry.pinyin, 'shuō, yuè')
+
+  def test_simplified(self):
+    """Add a new sense to a DictionaryEntry object"""
+    trad = '說'
+    hwid = '1'
+    entry = cndict_types.DictionaryEntry(trad, [], hwid)
+    simplified = '说'
+    pinyin = 'shuō'
+    english = 'say'
+    sense = cndict_types.WordSense(simplified, trad, pinyin, english)
+    entry.add_word_sense(sense)
+    self.assertEqual(entry.simplified, simplified)
+
+  def test_traditional(self):
+    """Add a new sense to a DictionaryEntry object"""
+    trad = '說'
+    hwid = '1'
+    entry = cndict_types.DictionaryEntry(trad, [], hwid)
+    simplified = '说'
+    pinyin = 'shuō'
+    english = 'say'
+    sense = cndict_types.WordSense(simplified, trad, pinyin, english)
+    entry.add_word_sense(sense)
+    self.assertEqual(entry.traditional, trad)
+
 
 class WordSenseTest(unittest.TestCase):
 

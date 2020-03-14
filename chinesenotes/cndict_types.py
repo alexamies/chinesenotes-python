@@ -44,7 +44,7 @@ class WordSense:
     return self._english
 
   @property
-  def grammar(self) -> str: # pylint: disable=function-redefined
+  def grammar(self) -> str:
     """Part of speech for the word sense"""
     return self._grammar
 
@@ -64,17 +64,17 @@ class WordSense:
     self._notes = value
 
   @property
-  def pinyin(self) -> str: # pylint: disable=function-redefined
+  def pinyin(self) -> str:
     """Pronunciation using pinyin representation"""
     return self._pinyin
 
   @property
-  def simplified(self) -> str: # pylint: disable=function-redefined
+  def simplified(self) -> str:
     """Simplified Chinese representation"""
     return self._simplified
 
   @property
-  def traditional(self) -> str: # pylint: disable=function-redefined
+  def traditional(self) -> str:
     """Traditional Chinese representation"""
     return self._traditional
 
@@ -102,6 +102,55 @@ class DictionaryEntry:
     return self._headword_id
 
   @property
+  def english(self) -> str:
+    """Enumerates the English of all the senses
+
+    A numbered list will be used to delimit if thre is more than one.
+    """
+    if len(self._senses) == 1:
+    	return self._senses[0].english
+    eng = []
+    for i, sense in enumerate(self._senses, 1):
+    	eng.append(f'{i}. {sense.english}')
+    return '; '.join(eng)
+
+  @property
+  def pinyin(self) -> str:
+    """Rolls up the Hanyu pinyin representations of all the senses
+
+    A comma will be used to delimit if thre is more than one pinyin
+    pronunciation.
+    """
+    pin = set()
+    for sense in self._senses:
+  	  pin.add(sense.pinyin)
+    return ', '.join(pin)
+
+  @property
   def senses(self) -> List[WordSense]:
     """A list of senses for the entry"""
     return self._senses
+
+  @property
+  def simplified(self) -> str:
+    """Rolls up the simplified Chinese representations of all the senses
+
+    A Chinese enumeration comma 、 will be used to delimit if thre are more than
+    one simplified writing.
+    """
+    simp = set()
+    for sense in self._senses:
+    	simp.add(sense.simplified)
+    return '、'.join(simp)
+
+  @property
+  def traditional(self) -> str:
+    """Rolls up the traditional Chinese representations of all the senses
+
+    A Chinese enumeration comma 、 will be used to delimit if thre are more than
+    one traditional writing.
+    """
+    trad = set()
+    for sense in self._senses:
+    	trad.add(sense.traditional)
+    return '、'.join(trad)

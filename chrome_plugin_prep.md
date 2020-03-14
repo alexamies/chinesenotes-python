@@ -53,7 +53,7 @@ cd chinesenotes-python
 ## Generate the dictionary file in CC-CEDICT format
 
 ```shell
-python3 chinesenotes/cndict.py --convert ../../zhongzhong/data/cedict_ts.u8
+python3 -m chinesenotes.cndict --convert ~/src/zhongzhong/data/cedict_ts.u8
 ```
 
 Load the browser plugin in unpacked mode to test.
