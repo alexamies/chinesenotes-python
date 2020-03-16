@@ -3,3 +3,6 @@ indent-string='  '
 
 [LOGGING]
 logging-format-style=new
+
+[MESSAGES CONTROL]
+disable=E0213,W1202

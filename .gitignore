@@ -3,6 +3,7 @@ __pycache__/
 beam*/
 chinesenotes.egg-info/
 credentials.json
+out.tsv
 outputs*
 tmp/
 venv/

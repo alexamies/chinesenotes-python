@@ -24,18 +24,21 @@ def to_simplified(wdict, trad):
   """Convert to simplified Chinese characters"""
   simplified = ""
   traditional = trad
-  pinyin = u""
+  pinyin = []
   for char in trad:
     if char in wdict:
       entry = wdict[char]
       simplified += entry.simplified
-      pinyin += entry.pinyin
+      pinyin.append(entry.senses[0].pinyin)
     else:
       simplified += char
-      pinyin += ' '
+      pinyin.append(' ')
   if simplified == trad:
     traditional = '\\N'
-  return simplified, traditional, pinyin.lower()
+  pinyin_str = ''.join(pinyin)
+  if len(trad) > 2: # For phrases add space in between syllables
+    pinyin_str = ' '.join(pinyin)
+  return simplified, traditional, pinyin_str.lower()
 
 
 def to_traditional(wdict, chinese):
