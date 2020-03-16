@@ -18,11 +18,17 @@
 
 """
 Utilities for converting dictionary file
+
+See the CC-CEDICT Wiki at https://cc-cedict.org/wiki/start
+Download the CC-CEDICT file from
+https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.zip
 """
 
+import argparse
 import logging
 import os
 import re
+from typing import Mapping
 
 from chinesenotes import charutil
 from chinesenotes import cndict
@@ -30,19 +36,49 @@ from chinesenotes.cndict_types import DictionaryEntry
 from chinesenotes.cndict_types import WordSense
 
 
-# Download the file from
-# https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.zip
-DICT_FILE_NAME = '../cc-cedict/cedict_ts.u8'
+PINYIN_CONVERSION = {'ā': ('a', 1), 'á': ('a', 2), 'ǎ': ('a', 3), 'à': ('a', 4),
+                     'ē': ('e', 1), 'é': ('e', 2), 'ě': ('e', 3), 'è': ('e', 4),
+                     'ī': ('i', 1), 'í': ('i', 2), 'ǐ': ('i', 3), 'ì': ('i', 4),
+                     'ō': ('o', 1), 'ó': ('o', 2), 'ǒ': ('o', 3), 'ò': ('o', 4),
+                     'ū': ('u', 1), 'ú': ('u', 2), 'ǔ': ('u', 3), 'ù': ('u', 4)}
 
+
+class EntryFormatter:
+  """Methods for formatting entries"""
+
+  def add_space_slash(english: str) -> str:
+    """Adds space around a forward slash /"""
+    if '/' in english:
+      return english.replace('/', ' / ')
+    return english
 
 class EntryAnalyzer:
   """Methods for analyzing entries"""
+
   def __init__(self):
-    self.p_contains_alphanum = re.compile('[a-zA-Z0-9]+')
+    self.p_contains_alphanum = re.compile('.*[a-zA-Z0-9]+')
+    self.p_refers_to_variant= re.compile('(variant|see)')
+
+  def guess_grammar(chinese: str, english: str) -> str:
+    """Guess what the part of speech is"""
+    pos = 'noun'
+    if len(chinese) > 3:
+      pos = 'set phrase'
+    elif english[0].isupper():
+      pos = 'proper noun'
+    elif len(english) > 1 and english[-2:] == 'ed':
+      pos = 'adjective'
+    elif len(english) > 1 and english[:2] == 'to':
+      pos = 'verb'
+    return pos
 
   def contains_alphanum(self, chinese: str) -> bool:
     """Checks whether a text string contains any Latin letters or numbers"""
     return self.p_contains_alphanum.match(chinese)
+
+  def refers_to_variant(self, english: str) -> bool:
+    """Guess whether the entry is a reference to a variant"""
+    return self.p_refers_to_variant.match(english)
 
   def contains_notes(english: str) -> bool:
     """Guess whether an English equivalent contains notes"""
@@ -52,22 +88,22 @@ class EntryAnalyzer:
 def compare_cc_cedict_cnotes(in_fname: str, out_fname: str):
   """Compares the cc_cedict and chinesenotes, reporting the differences
 
+  Writes the output to out_fname and prints a summary to the console
   Params:
     in_fname: Full path name of the cc-cedict file
     out_fname: Full path name of an output file
   """
   analyzer = EntryAnalyzer()
   cedict = open_cc_cedict(in_fname)
-  if 'CNREADER_HOME' in os.environ:
-    cn_home = os.environ['CNREADER_HOME']
-    cnotes_fname = f'{cn_home}/data/words.txt'
-  cnotes_dict = cndict.open_dictionary(cnotes_fname)
+  cnotes_dict = cndict.open_dictionary()
   absent_cnotes = 0
   absent_contain_alphanum = 0
   absent_single_char = 0
   absent_multiple_senses = 0
   absent_contains_notes = 0
+  absent_refers_to_variant = 0
   sample = 0
+  luid = 116011
   with open(out_fname, 'w') as out_file:
     for trad, entry in cedict.items():
       if trad not in cnotes_dict:
@@ -79,20 +115,37 @@ def compare_cc_cedict_cnotes(in_fname: str, out_fname: str):
           absent_single_char += 1
         if len(entry.senses) > 1:
           absent_multiple_senses += 1
-        if EntryAnalyzer.contains_notes(entry.english):
+        contains_notes = EntryAnalyzer.contains_notes(entry.english)
+        if contains_notes:
           absent_contains_notes += 1
+        refers_to_variant = analyzer.refers_to_variant(entry.english)
+        if refers_to_variant:
+          absent_refers_to_variant += 1
         if (sample < 100
             and not contains_alphanum
             and len(trad) > 1
-            and not EntryAnalyzer.contains_notes(entry.english)
-            and not len(entry.senses) > 1):
+            and not contains_notes
+            and not len(entry.senses) > 1
+            and not refers_to_variant):
           _, _, pinyin = charutil.to_simplified(cnotes_dict, trad)
-          out_file.write(
-              f'{entry.simplified}\t{trad}\t{pinyin}\t{entry.english}\n')
+          grammar = EntryAnalyzer.guess_grammar(trad, entry.english)
+          traditional = trad
+          if entry.simplified == trad:
+            traditional = entry.simplified
+          empty = '\\N\t\\N'
+          modern = '现代汉语\tModern Chinese'
+          english = EntryFormatter.add_space_slash(entry.english)
+          out_file.write(f'{luid}\t{entry.simplified}\t{traditional}\t'
+              f'{pinyin}\t{english}\t{grammar}\t{empty}\t{modern}\t'
+              f'{empty}\t{empty}\t(CC-CEDICT \'{trad}\')\t{luid}\n')
           sample += 1
+          luid += 1
     print(f'absent_cnotes: {absent_cnotes}, absent_contain_alphanum: '
-          f'{absent_contain_alphanum}, absent_single_char: {absent_single_char}, '
-          f'absent_multiple_senses: {absent_multiple_senses}')
+          f'{absent_contain_alphanum}, absent_single_char: '
+          f'{absent_single_char}, absent_multiple_senses: '
+          f'{absent_multiple_senses}, absent_refers_to_variant: '
+          f'{absent_refers_to_variant}, sample: {sample}')
+
 
 def open_cc_cedict(fname: str):
   """Reads the CC-CEDICT dictionary into memory
@@ -133,10 +186,85 @@ def open_cc_cedict(fname: str):
   return cedict
 
 
+def to_cc_cedict(infile: str, outfile: str):
+  """Converts the Chinese Notes dictionary from native format to CC-CEDICT
+
+  Since there are utilities available that use the CC-CEDICT format, it can be
+  useful to have the dicitonary in that format.
+  """
+  wdict = cndict.open_dictionary(infile)
+  with open(outfile, 'w') as outf:
+    done = set()
+    for key in wdict:
+      entry = wdict[key]
+      simplified = entry.simplified
+      traditional = entry.traditional
+      if traditional == '\\N':
+        traditional = simplified
+      if simplified in done or traditional in done:
+        continue
+      pinyin = entry.pinyin
+      pinyin = _convert_pinyin_numeric(simplified, wdict)
+      english = entry.english
+      if english == '\\N':
+        continue
+      outf.write(f'{traditional} {simplified} [{pinyin}] /{english}/\n')
+      done.add(simplified)
+      done.add(traditional)
+
+def _convert_pinyin_numeric(simplified: str,
+                            wdict: Mapping[str, DictionaryEntry]) -> str:
+  """Convert pinyin from a format like ā to a1 with spaces between the syllables
+
+  For example, fēnsàn -> fen1 san4
+  """
+  new_pinyin = []
+  for character in simplified:
+    if character not in wdict:
+      continue
+    term = wdict[character]
+    pinyini = term.pinyin
+    new_char_pinyin = []
+    tone_number = ''
+    for letter in pinyini:
+      tone_number = ''
+      if letter in PINYIN_CONVERSION:
+        regular_letter = PINYIN_CONVERSION[letter][0]
+        tone_number = str(PINYIN_CONVERSION[letter][1])
+        new_char_pinyin.append(regular_letter)
+      else:
+        new_char_pinyin.append(letter)
+    new_char_pinyin.append(tone_number)
+    new_pinyin.append(''.join(new_char_pinyin))
+  return ' '.join(new_pinyin)
+
+
 def main():
   """Command line entry point"""
   logging.basicConfig(level=logging.INFO)
-  compare_cc_cedict_cnotes(DICT_FILE_NAME, 'out.tsv')
+  cn_home = 'https://github.com/alexamies/chinesenotes.com'
+  fname = f'{cn_home}/blob/master/data/words.txt?raw=true'
+  wdict = {}
+  if 'CNREADER_HOME' in os.environ:
+    cn_home = os.environ['CNREADER_HOME']
+    fname = f'{cn_home}/data/words.txt'
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--to_cnotes',
+                      dest='to_cnotes',
+                      help='Convert to Chinese Notes format with given output '
+                      'file')
+  parser.add_argument('--to_cc_cedict',
+                      dest='to_cc_cedict',
+                      help='Convert to CC-CEDICT format with given output file')
+  args = parser.parse_args()
+  if args.to_cnotes:
+    compare_cc_cedict_cnotes(args.to_cnotes, 'out.tsv')
+  elif args.to_cc_cedict:
+    logging.info('Converting to CC-CEDICT format with output file '
+                 '{args.convert}')
+    to_cc_cedict(fname, args.to_cc_cedict)
+    print('Done')
+
 
 
 # Entry point from a script

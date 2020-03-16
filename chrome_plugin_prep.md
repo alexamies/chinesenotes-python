@@ -24,6 +24,8 @@ Prerequesities:
 
 Instructions here assume Linux or Mac.
 
+Setup the Python venv environment as per the main README.md.
+
 Starting from a top level directory, above this repo, clone the Chinese Notes or
 NTI Reader repo, which contains the same dictionary
 
@@ -53,7 +55,7 @@ cd chinesenotes-python
 ## Generate the dictionary file in CC-CEDICT format
 
 ```shell
-python3 -m chinesenotes.cndict --convert ~/src/zhongzhong/data/cedict_ts.u8
+python -m chinesenotes.conversion --to_cc_cedict ~/src/zhongzhong/data/cedict_ts.u8
 ```
 
 Load the browser plugin in unpacked mode to test.

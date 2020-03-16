@@ -27,41 +27,10 @@ import os
 import urllib.request
 from typing import List, Mapping, TextIO
 
+from chinesenotes.config import AppConfig
+from chinesenotes.config import ConfigException
 from chinesenotes.cndict_types import DictionaryEntry
 from chinesenotes.cndict_types import WordSense
-
-PINYIN_CONVERSION = {'ā': ('a', 1), 'á': ('a', 2), 'ǎ': ('a', 3), 'à': ('a', 4),
-                     'ē': ('e', 1), 'é': ('e', 2), 'ě': ('e', 3), 'è': ('e', 4),
-                     'ī': ('i', 1), 'í': ('i', 2), 'ǐ': ('i', 3), 'ì': ('i', 4),
-                     'ō': ('o', 1), 'ó': ('o', 2), 'ǒ': ('o', 3), 'ò': ('o', 4),
-                     'ū': ('u', 1), 'ú': ('u', 2), 'ǔ': ('u', 3), 'ù': ('u', 4)}
-
-
-def convert_to_cccedict(infile: str, outfile: str):
-  """Converts the Chinese Notes dictionary from native format to CC-CEDICT
-
-  Since there are utilities available that use the CC-CEDICT format, it can be
-  useful to have the dicitonary in that format.
-  """
-  wdict = open_dictionary(infile)
-  with open(outfile, 'w') as outf:
-    done = set()
-    for key in wdict:
-      entry = wdict[key]
-      simplified = entry.simplified
-      traditional = entry.traditional
-      if traditional == '\\N':
-        traditional = simplified
-      if simplified in done or traditional in done:
-        continue
-      pinyin = entry.pinyin
-      pinyin = _convert_pinyin_numeric(simplified, wdict)
-      english = entry.english
-      if english == '\\N':
-        continue
-      outf.write(f'{traditional} {simplified} [{pinyin}] /{english}/\n')
-      done.add(simplified)
-      done.add(traditional)
 
 
 def lookup(wdict: Mapping[str, DictionaryEntry],
@@ -71,7 +40,7 @@ def lookup(wdict: Mapping[str, DictionaryEntry],
   return wdict[keyword]
 
 
-def open_dictionary(fname: str,
+def open_dictionary(fname=None,
                     chinese_only=False) -> Mapping[str, DictionaryEntry]:
   """Reads the dictionary from a file or URL.
 
@@ -85,10 +54,17 @@ def open_dictionary(fname: str,
       A dictionary object
   """
   print(f'Opening the Chinese Notes dictionary from {fname}')
-  if fname.startswith('https'):
+  wdict = {}
+  if fname and fname.startswith('https'): # Download from GitHub
     wdict = _load_from_url(fname, chinese_only)
-  else:
+  elif fname: # Load with given file name
     wdict = _load_locally(fname, chinese_only)
+  elif not fname and 'CNREADER_HOME' in os.environ: # Load based on app config
+    app_config = AppConfig()
+    app_config.load()
+    wdict = _load_dict_files(app_config.lex_unit_files, chinese_only)
+  else:
+    raise ConfigException('No parametrs provided to load dictionary')
   print(f'open_dictionary completed with {len(wdict)} entries"')
   return wdict
 
@@ -169,6 +145,33 @@ def _load_dictionary(dict_file: TextIO,
         entry.add_word_sense(sense)
   return wdict
 
+def _load_dict_files(dict_files: List[str],
+                     chinese_only=False) -> Mapping[str, DictionaryEntry]:
+  """Loads the dictionary from a file or URL.
+
+    Set chinese_only = True if you are only using the dictionary to segment
+    Chinese text. This will decrease the memory needed.
+
+    Args:
+      fname: the file or remote URL to read the dictionary from
+      chinese_only: Only include Chinese and no other fields
+    Returns:
+      A dictionary of DictionaryEntry objects
+  """
+  wdict = {}
+  for fname in dict_files:
+    term_dict = _load_locally(fname, chinese_only)
+    if not wdict:
+      wdict = term_dict
+    else:
+      for key, entry in term_dict.items():
+        if entry not in wdict:
+          wdict[key] = entry
+        else:
+          for sense in entry.senses:
+            wdict[key].add_word_sense(sense)
+  return wdict
+
 def _load_from_url(url: str,
                    chinese_only=False) -> Mapping[str, DictionaryEntry]:
   """Reads the dictionary from a local file
@@ -182,35 +185,9 @@ def _load_locally(fname: str,
                   chinese_only=False) -> Mapping[str, DictionaryEntry]:
   """Reads the dictionary from a local file
   """
-  logging.info('Opening dictionary from local file ')
+  logging.info(f'Opening dictionary from local file {fname}')
   with open(fname, 'r') as dict_file:
     return _load_dictionary(dict_file, chinese_only)
-
-def _convert_pinyin_numeric(simplified: str,
-                            wdict: Mapping[str, DictionaryEntry]) -> str:
-  """Convert pinyin from a format like ā to a1 with spaces between the syllables
-
-  For example, fēnsàn -> fen1 san4
-  """
-  new_pinyin = []
-  for character in simplified:
-    if character not in wdict:
-      continue
-    term = wdict[character]
-    pinyini = term.pinyin
-    new_char_pinyin = []
-    tone_number = ''
-    for letter in pinyini:
-      tone_number = ''
-      if letter in PINYIN_CONVERSION:
-        regular_letter = PINYIN_CONVERSION[letter][0]
-        tone_number = str(PINYIN_CONVERSION[letter][1])
-        new_char_pinyin.append(regular_letter)
-      else:
-        new_char_pinyin.append(letter)
-    new_char_pinyin.append(tone_number)
-    new_pinyin.append(''.join(new_char_pinyin))
-  return ' '.join(new_pinyin)
 
 
 def main():
@@ -230,9 +207,6 @@ def main():
   parser.add_argument('--tokenize',
                       dest='tokenize',
                       help='Segment the text into multi-character terms')
-  parser.add_argument('--convert',
-                      dest='convert',
-                      help='Convert to CC-CEDICT format with given output file')
   args = parser.parse_args()
   if args.lookup:
     entry = lookup(wdict, args.lookup)
@@ -245,11 +219,6 @@ def main():
     logging.info('Greedy dictionary-based text segmentation')
     segments = tokenize_greedy(wdict, args.tokenize)
     print(f'Segments: {segments}')
-  elif args.convert:
-    logging.info('Converting to CC-CEDICT format with output file '
-                 '{args.convert}')
-    convert_to_cccedict(fname, args.convert)
-    print('Done')
 
 # Entry point from a script
 if __name__ == '__main__':
