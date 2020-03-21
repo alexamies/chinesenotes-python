@@ -87,6 +87,24 @@ def tokenize_greedy(wdict: Mapping[str, DictionaryEntry],
         break
   return segments
 
+def tokenize_exclude_whole(wdict: Mapping[str, DictionaryEntry],
+                    chunk: str) -> List[str]:
+  """A tokenize but not including the full word"""
+  segments = []
+  i = 0
+  while i < len(chunk):
+    for j in range(len(chunk), -1, -1):
+      word = chunk[i:j]
+      if word in wdict and not word == chunk:
+        segments.append(word)
+        i += len(word)
+        break
+      if len(word) == 1:
+        segments.append(word)
+        i += 1
+        break
+  return segments
+
 
 def _load_dictionary(dict_file: TextIO,
                      chinese_only=False) -> Mapping[str, DictionaryEntry]:

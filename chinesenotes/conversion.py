@@ -43,14 +43,96 @@ PINYIN_CONVERSION = {'ā': ('a', 1), 'á': ('a', 2), 'ǎ': ('a', 3), 'à': ('a',
                      'ū': ('u', 1), 'ú': ('u', 2), 'ǔ': ('u', 3), 'ù': ('u', 4)}
 
 
+class EntryAnalysis:
+  """Contains results of entry analysis"""
+
+  def __init__(self,
+               contains_alphanum: bool,
+               refers_to_variant: bool,
+               grammar: str,
+               contains_notes: bool):
+    self.contains_alphanum = contains_alphanum
+    self.refers_to_variant= refers_to_variant
+    self.grammar = grammar
+    self.contains_notes = contains_notes
+
+
+class ComparisonSummary:
+  """Summary of the comparison between dictionaries"""
+
+  def __init__(self, name1: str, name2: str):
+    """Constructor"""
+    self.name1 = name1
+    self.name2 = name2
+    self.analyzer = EntryAnalyzer()
+    self.absent_dict2 = 0
+    self.absent_contain_alphanum = 0
+    self.absent_single_char = 0
+    self.absent_multiple_senses = 0
+    self.absent_contains_notes = 0
+    self.absent_refers_to_variant = 0
+    self.p_contains_alphanum = re.compile('.*[a-zA-Z0-9]+')
+    self.p_refers_to_variant= re.compile('(variant|see)')
+
+  def increment_absent_dict2(self, entry: DictionaryEntry) -> EntryAnalysis:
+    self.absent_dict2 += 1
+    simplified = entry.simplified
+    contains_alphanum = self.analyzer.contains_alphanum(simplified)
+    refers_to_variant = self.analyzer.refers_to_variant(entry.english)
+    grammar = EntryAnalyzer.guess_grammar(entry.simplified, entry.english)
+    contains_notes = EntryAnalyzer.contains_notes(entry.english)
+    entry_analysis = EntryAnalysis(contains_alphanum,
+                                   refers_to_variant,
+                                   grammar,
+                                   contains_notes)
+    if contains_alphanum:
+      self.absent_contain_alphanum += 1
+    if len(simplified) == 1:
+      self.absent_single_char += 1
+    if len(entry.senses) > 1:
+      self.absent_multiple_senses += 1
+    if contains_notes:
+      self.absent_contains_notes += 1
+    if refers_to_variant:
+      self.absent_refers_to_variant += 1
+    return entry_analysis
+
+  def print_summary(self):
+    print(f'Present in {self.name1}, absent in {self.name2}, '
+        f'num absent: {self.absent_dict2}, '
+        f'containing alphanum: {self.absent_contain_alphanum}, '
+        f'single char: {self.absent_single_char}, '
+        f'multiple senses: {self.absent_multiple_senses}, '
+        f'refers_to_variant: {self.absent_refers_to_variant}')
+
+
 class EntryFormatter:
   """Methods for formatting entries"""
 
-  def add_space_slash(english: str) -> str:
+  def __init__(self,
+               wdict: Mapping[str, DictionaryEntry],
+               entry: DictionaryEntry):
+    """Constructor"""
+    self.entry = entry
+    self.wdict = wdict
+
+  def add_space_slash(self) -> str:
     """Adds space around a forward slash /"""
+    english = self.entry.english
     if '/' in english:
       return english.replace('/', ' / ')
     return english
+
+  def reformat_pinyin(self) -> str:
+    """Reformats the pinyin string /"""
+    simplified = self.entry.simplified
+    tokens = cndict.tokenize_exclude_whole(self.wdict, simplified)
+    pinyin = []
+    for token in tokens:
+      token_entry = self.wdict[token]
+      pinyin.append(token_entry.senses[0].pinyin)
+    return ' '.join(pinyin)
+
 
 class EntryAnalyzer:
   """Methods for analyzing entries"""
@@ -62,10 +144,10 @@ class EntryAnalyzer:
   def guess_grammar(chinese: str, english: str) -> str:
     """Guess what the part of speech is"""
     pos = 'noun'
-    if len(chinese) > 3:
-      pos = 'set phrase'
-    elif english[0].isupper():
+    if english[0].isupper():
       pos = 'proper noun'
+    elif len(chinese) > 3:
+      pos = 'set phrase'
     elif len(english) > 1 and english[-2:] == 'ed':
       pos = 'adjective'
     elif len(english) > 1 and english[:2] == 'to':
@@ -93,58 +175,37 @@ def compare_cc_cedict_cnotes(in_fname: str, out_fname: str):
     in_fname: Full path name of the cc-cedict file
     out_fname: Full path name of an output file
   """
+  summary = ComparisonSummary('CC-CEDICT', 'Chinese Notes')
   analyzer = EntryAnalyzer()
   cedict = open_cc_cedict(in_fname)
   cnotes_dict = cndict.open_dictionary()
-  absent_cnotes = 0
-  absent_contain_alphanum = 0
-  absent_single_char = 0
-  absent_multiple_senses = 0
-  absent_contains_notes = 0
-  absent_refers_to_variant = 0
   sample = 0
-  luid = 116011
+  luid = 116672
   with open(out_fname, 'w') as out_file:
     for trad, entry in cedict.items():
       if trad not in cnotes_dict:
-        absent_cnotes += 1
-        contains_alphanum = analyzer.contains_alphanum(trad)
-        if contains_alphanum:
-          absent_contain_alphanum += 1
-        if len(trad) == 1:
-          absent_single_char += 1
-        if len(entry.senses) > 1:
-          absent_multiple_senses += 1
-        contains_notes = EntryAnalyzer.contains_notes(entry.english)
-        if contains_notes:
-          absent_contains_notes += 1
-        refers_to_variant = analyzer.refers_to_variant(entry.english)
-        if refers_to_variant:
-          absent_refers_to_variant += 1
+        entry_analysis = summary.increment_absent_dict2(entry)
         if (sample < 100
-            and not contains_alphanum
+            and not entry_analysis.contains_alphanum
             and len(trad) > 1
-            and not contains_notes
+            and not entry_analysis.contains_notes
             and not len(entry.senses) > 1
-            and not refers_to_variant):
-          _, _, pinyin = charutil.to_simplified(cnotes_dict, trad)
-          grammar = EntryAnalyzer.guess_grammar(trad, entry.english)
+            and not entry_analysis.refers_to_variant):
+          grammar = entry_analysis.grammar
           traditional = trad
           if entry.simplified == trad:
-            traditional = entry.simplified
+            traditional = '\\N'
           empty = '\\N\t\\N'
           modern = '现代汉语\tModern Chinese'
-          english = EntryFormatter.add_space_slash(entry.english)
+          formatter = EntryFormatter(cnotes_dict, entry)
+          english = formatter.add_space_slash()
+          pinyin = formatter.reformat_pinyin()
           out_file.write(f'{luid}\t{entry.simplified}\t{traditional}\t'
               f'{pinyin}\t{english}\t{grammar}\t{empty}\t{modern}\t'
               f'{empty}\t{empty}\t(CC-CEDICT \'{trad}\')\t{luid}\n')
           sample += 1
           luid += 1
-    print(f'absent_cnotes: {absent_cnotes}, absent_contain_alphanum: '
-          f'{absent_contain_alphanum}, absent_single_char: '
-          f'{absent_single_char}, absent_multiple_senses: '
-          f'{absent_multiple_senses}, absent_refers_to_variant: '
-          f'{absent_refers_to_variant}, sample: {sample}')
+    summary.print_summary()
 
 
 def open_cc_cedict(fname: str):

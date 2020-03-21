@@ -36,7 +36,7 @@ def to_simplified(wdict, trad):
   if simplified == trad:
     traditional = '\\N'
   pinyin_str = ''.join(pinyin)
-  if len(trad) > 2: # For phrases add space in between syllables
+  if len(trad) > 3: # For phrases add space in between syllables
     pinyin_str = ' '.join(pinyin)
   return simplified, traditional, pinyin_str.lower()
 
