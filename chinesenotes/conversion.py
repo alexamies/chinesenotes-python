@@ -55,6 +55,8 @@ class EntryAnalysis:
     self.refers_to_variant= refers_to_variant
     self.grammar = grammar
     self.contains_notes = contains_notes
+    self.domain = None
+    self.subdomain = None
 
 
 class ComparisonSummary:
@@ -85,6 +87,10 @@ class ComparisonSummary:
                                    refers_to_variant,
                                    grammar,
                                    contains_notes)
+    domain = EntryAnalyzer.guess_domain(entry.english)
+    entry_analysis.domain = domain
+    subdomain = EntryAnalyzer.guess_subdomain(entry.english)
+    entry_analysis.subdomain = subdomain
     if contains_alphanum:
       self.absent_contain_alphanum += 1
     if len(simplified) == 1:
@@ -131,7 +137,9 @@ class EntryFormatter:
     for token in tokens:
       token_entry = self.wdict[token]
       pinyin.append(token_entry.senses[0].pinyin)
-    return ' '.join(pinyin)
+    if len(simplified) > 4:
+      return ' '.join(pinyin)
+    return ''.join(pinyin)
 
 
 class EntryAnalyzer:
@@ -140,6 +148,21 @@ class EntryAnalyzer:
   def __init__(self):
     self.p_contains_alphanum = re.compile('.*[a-zA-Z0-9]+')
     self.p_refers_to_variant= re.compile('(variant|see)')
+
+  def guess_domain(english: str) -> str:
+    """Guess the term domain, default modern Chinese"""
+    if '(idiom)' in english:
+      return '成语\tIdiom'
+    if '(computing)' in english:
+      return '计算机科学\tComputer Science'
+    if ('City' in english or
+        'county' in english or
+        'River' in english or
+        'state' in english):
+      return '地方\tPlaces'
+    if 'film' in english:
+      return '戏剧\tDrama'
+    return '现代汉语\tModern Chinese'
 
   def guess_grammar(chinese: str, english: str) -> str:
     """Guess what the part of speech is"""
@@ -153,6 +176,33 @@ class EntryAnalyzer:
     elif len(english) > 1 and english[:2] == 'to':
       pos = 'verb'
     return pos
+
+  def guess_subdomain(english: str) -> str:
+    """Guess the term subdomain, default none"""
+    if 'math' in english:
+      return '数学\tMathematics'
+    if 'geometry' in english:
+      return '几何\tGeometry'
+    if 'physics' in english:
+      return '物理\tPhysics'
+    if ('(chemistry)' in english
+        or 'acid' in english
+        or 'tyl' in english
+        or 'alcohol' in english
+        or 'oxide' in english):
+      return '化学\tChemistry'
+    if '(dialect)' in english:
+      return '方言\tDialect'
+    if ('itis' in english
+        or 'disease' in english
+        or 'physiology' in english
+        or 'syndrome' in english):
+      return '医学\tMedicine'
+    if 'biology' in english:
+      return '医学\tMedicine'
+    if 'music' in english:
+      return '音乐\tMusic'
+    return '\\N\t\\N'
 
   def contains_alphanum(self, chinese: str) -> bool:
     """Checks whether a text string contains any Latin letters or numbers"""
@@ -180,7 +230,7 @@ def compare_cc_cedict_cnotes(in_fname: str, out_fname: str):
   cedict = open_cc_cedict(in_fname)
   cnotes_dict = cndict.open_dictionary()
   sample = 0
-  luid = 116672
+  luid = 117009
   with open(out_fname, 'w') as out_file:
     for trad, entry in cedict.items():
       if trad not in cnotes_dict:
@@ -196,13 +246,14 @@ def compare_cc_cedict_cnotes(in_fname: str, out_fname: str):
           if entry.simplified == trad:
             traditional = '\\N'
           empty = '\\N\t\\N'
-          modern = '现代汉语\tModern Chinese'
+          domain = entry_analysis.domain
+          subdomain = entry_analysis.subdomain
           formatter = EntryFormatter(cnotes_dict, entry)
           english = formatter.add_space_slash()
           pinyin = formatter.reformat_pinyin()
           out_file.write(f'{luid}\t{entry.simplified}\t{traditional}\t'
-              f'{pinyin}\t{english}\t{grammar}\t{empty}\t{modern}\t'
-              f'{empty}\t{empty}\t(CC-CEDICT \'{trad}\')\t{luid}\n')
+              f'{pinyin}\t{english}\t{grammar}\t{empty}\t{domain}\t'
+              f'{subdomain}\t{empty}\t(CC-CEDICT \'{trad}\')\t{luid}\n')
           sample += 1
           luid += 1
     summary.print_summary()
