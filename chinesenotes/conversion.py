@@ -56,6 +56,7 @@ class EntryAnalysis:
     self.grammar = grammar
     self.contains_notes = contains_notes
     self.domain = None
+    self.entity_kind = None
     self.subdomain = None
 
 
@@ -91,6 +92,8 @@ class ComparisonSummary:
     entry_analysis.domain = domain
     subdomain = EntryAnalyzer.guess_subdomain(entry.english)
     entry_analysis.subdomain = subdomain
+    entity_kind = EntryAnalyzer.guess_entity_kind(entry.english)
+    entry_analysis.entity_kind = entity_kind
     if contains_alphanum:
       self.absent_contain_alphanum += 1
     if len(simplified) == 1:
@@ -162,7 +165,17 @@ class EntryAnalyzer:
       return '地方\tPlaces'
     if 'film' in english:
       return '戏剧\tDrama'
+    if 'linguistics' in english:
+      return '语言学\tLinguistics'
     return '现代汉语\tModern Chinese'
+
+  def guess_entity_kind(english: str) -> str:
+    """Guess the entity kind, default empty"""
+    if 'county' in english:
+      return '县\tCounty'
+    if '(language)' in english:
+      return '语言\tLanguage'
+    return '\\N\t\\N'
 
   def guess_grammar(chinese: str, english: str) -> str:
     """Guess what the part of speech is"""
@@ -179,29 +192,50 @@ class EntryAnalyzer:
 
   def guess_subdomain(english: str) -> str:
     """Guess the term subdomain, default none"""
-    if 'math' in english:
-      return '数学\tMathematics'
-    if 'geometry' in english:
-      return '几何\tGeometry'
-    if 'physics' in english:
-      return '物理\tPhysics'
+    if 'nebula' in english or 'constellation' in english or 'galaxy' in english:
+      return '天文\tAstronomy'
+    if 'biology' in english:
+      return '生物学\tBiology'
     if ('(chemistry)' in english
         or 'acid' in english
         or 'tyl' in english
         or 'alcohol' in english
         or 'oxide' in english):
       return '化学\tChemistry'
+    if 'Christianity' in english:
+      return '基督教\tChristianity'
     if '(dialect)' in english:
       return '方言\tDialect'
+    if 'fruit' in english:
+      return '饮食\tFood and Drink'
+    if 'geometry' in english:
+      return '几何\tGeometry'
+    if '(law)' in english:
+      return '法律\tLaw'
+    if 'math' in english:
+      return '数学\tMathematics'
+    if 'math' in english or 'algebra' in english:
+      return '数学\tMathematics'
+    if 'military' in english:
+      return '军事\tMilitary'
     if ('itis' in english
+        or 'anatomy' in english
         or 'disease' in english
         or 'physiology' in english
-        or 'syndrome' in english):
+        or 'syndrome' in english
+        or 'virus' in english
+        or 'medical' in english):
       return '医学\tMedicine'
-    if 'biology' in english:
-      return '医学\tMedicine'
-    if 'music' in english:
-      return '音乐\tMusic'
+    if '(name)' in english:
+      return '名字\tNames'
+    if 'physics' in english or 'electric' in english:
+      return '物理\tPhysics'
+    if '(coll.)' in english:
+      return '口语\tSpoken Language'
+    if 'ball' in english or 'soccer' in english:
+      return '体育\tSport'
+    if 'curse' in english:
+      return '俚语\tSlang'
     return '\\N\t\\N'
 
   def contains_alphanum(self, chinese: str) -> bool:
@@ -230,7 +264,7 @@ def compare_cc_cedict_cnotes(in_fname: str, out_fname: str):
   cedict = open_cc_cedict(in_fname)
   cnotes_dict = cndict.open_dictionary()
   sample = 0
-  luid = 117009
+  luid = 117239
   with open(out_fname, 'w') as out_file:
     for trad, entry in cedict.items():
       if trad not in cnotes_dict:
@@ -246,13 +280,14 @@ def compare_cc_cedict_cnotes(in_fname: str, out_fname: str):
           if entry.simplified == trad:
             traditional = '\\N'
           empty = '\\N\t\\N'
+          entity_kind = entry_analysis.entity_kind
           domain = entry_analysis.domain
           subdomain = entry_analysis.subdomain
           formatter = EntryFormatter(cnotes_dict, entry)
           english = formatter.add_space_slash()
           pinyin = formatter.reformat_pinyin()
           out_file.write(f'{luid}\t{entry.simplified}\t{traditional}\t'
-              f'{pinyin}\t{english}\t{grammar}\t{empty}\t{domain}\t'
+              f'{pinyin}\t{english}\t{grammar}\t{entity_kind}\t{domain}\t'
               f'{subdomain}\t{empty}\t(CC-CEDICT \'{trad}\')\t{luid}\n')
           sample += 1
           luid += 1
