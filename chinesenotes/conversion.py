@@ -58,6 +58,7 @@ class EntryAnalysis:
     self.domain = None
     self.entity_kind = None
     self.subdomain = None
+    self.is_modern_named_entity = False
 
 
 class ComparisonSummary:
@@ -74,6 +75,7 @@ class ComparisonSummary:
     self.absent_multiple_senses = 0
     self.absent_contains_notes = 0
     self.absent_refers_to_variant = 0
+    self.modern_named_entities = 0
     self.p_contains_alphanum = re.compile('.*[a-zA-Z0-9]+')
     self.p_refers_to_variant= re.compile('(variant|see)')
 
@@ -94,6 +96,8 @@ class ComparisonSummary:
     entry_analysis.subdomain = subdomain
     entity_kind = EntryAnalyzer.guess_entity_kind(entry.english)
     entry_analysis.entity_kind = entity_kind
+    is_modern_named_entity = EntryAnalyzer.is_modern_named_entity(simplified)
+    entry_analysis.is_modern_named_entity = is_modern_named_entity
     if contains_alphanum:
       self.absent_contain_alphanum += 1
     if len(simplified) == 1:
@@ -104,15 +108,18 @@ class ComparisonSummary:
       self.absent_contains_notes += 1
     if refers_to_variant:
       self.absent_refers_to_variant += 1
+    if is_modern_named_entity:
+      self.modern_named_entities += 1
     return entry_analysis
 
   def print_summary(self):
     print(f'Present in {self.name1}, absent in {self.name2}, '
-        f'num absent: {self.absent_dict2}, '
-        f'containing alphanum: {self.absent_contain_alphanum}, '
-        f'single char: {self.absent_single_char}, '
-        f'multiple senses: {self.absent_multiple_senses}, '
-        f'refers_to_variant: {self.absent_refers_to_variant}')
+        f'num absent: {self.absent_dict2}\n'
+        f'containing alphanum: {self.absent_contain_alphanum}\n'
+        f'single char: {self.absent_single_char}\n'
+        f'multiple senses: {self.absent_multiple_senses}\n'
+        f'refers_to_variant: {self.absent_refers_to_variant}\n'
+        f'modern_named_entities: {self.modern_named_entities}')
 
 
 class EntryFormatter:
@@ -152,14 +159,32 @@ class EntryAnalyzer:
     self.p_contains_alphanum = re.compile('.*[a-zA-Z0-9]+')
     self.p_refers_to_variant= re.compile('(variant|see)')
 
+
+  def contains_alphanum(self, chinese: str) -> bool:
+    """Checks whether a text string contains any Latin letters or numbers"""
+    return self.p_contains_alphanum.match(chinese)
+
+  def refers_to_variant(self, english: str) -> bool:
+    """Guess whether the entry is a reference to a variant"""
+    return self.p_refers_to_variant.match(english)
+
+  def contains_notes(english: str) -> bool:
+    """Guess whether an English equivalent contains notes"""
+    return len(english) > 30 # Guess that test with more than 30 chars are notes
+
   def guess_domain(english: str) -> str:
     """Guess the term domain, default modern Chinese"""
     if '(idiom)' in english:
       return '成语\tIdiom'
-    if '(computing)' in english:
+    if ('(computing)' in english or
+       'code' in english or
+       'network' in english or
+       'server' in english):
       return '计算机科学\tComputer Science'
     if ('City' in english or
+        'city' in english or
         'county' in english or
+        'Lake' in english or
         'River' in english or
         'state' in english):
       return '地方\tPlaces'
@@ -173,14 +198,20 @@ class EntryAnalyzer:
     """Guess the entity kind, default empty"""
     if 'county' in english:
       return '县\tCounty'
+    if 'city' in english or 'City' in english:
+      return '城市\tCity'
+    if 'Lake' in english:
+      return '湖\tLake'
     if '(language)' in english:
       return '语言\tLanguage'
+    if 'state' in english:
+      return '州\tState'
     return '\\N\t\\N'
 
   def guess_grammar(chinese: str, english: str) -> str:
     """Guess what the part of speech is"""
     pos = 'noun'
-    if english[0].isupper():
+    if english[0].isupper() or 'city' in english:
       pos = 'proper noun'
     elif len(chinese) > 3:
       pos = 'set phrase'
@@ -191,7 +222,7 @@ class EntryAnalyzer:
     return pos
 
   def guess_subdomain(english: str) -> str:
-    """Guess the term subdomain, default none"""
+    """Guess the term subdomain, default none, later check manually"""
     if 'nebula' in english or 'constellation' in english or 'galaxy' in english:
       return '天文\tAstronomy'
     if 'biology' in english:
@@ -202,7 +233,7 @@ class EntryAnalyzer:
         or 'alcohol' in english
         or 'oxide' in english):
       return '化学\tChemistry'
-    if 'Christianity' in english:
+    if 'Christianity' in english or 'Testament' in english:
       return '基督教\tChristianity'
     if '(dialect)' in english:
       return '方言\tDialect'
@@ -212,8 +243,6 @@ class EntryAnalyzer:
       return '几何\tGeometry'
     if '(law)' in english:
       return '法律\tLaw'
-    if 'math' in english:
-      return '数学\tMathematics'
     if 'math' in english or 'algebra' in english:
       return '数学\tMathematics'
     if 'military' in english:
@@ -236,19 +265,13 @@ class EntryAnalyzer:
       return '体育\tSport'
     if 'curse' in english:
       return '俚语\tSlang'
+    if 'state' in english:
+      return '美国\tUnited States'
     return '\\N\t\\N'
 
-  def contains_alphanum(self, chinese: str) -> bool:
-    """Checks whether a text string contains any Latin letters or numbers"""
-    return self.p_contains_alphanum.match(chinese)
-
-  def refers_to_variant(self, english: str) -> bool:
-    """Guess whether the entry is a reference to a variant"""
-    return self.p_refers_to_variant.match(english)
-
-  def contains_notes(english: str) -> bool:
-    """Guess whether an English equivalent contains notes"""
-    return len(english) > 30 # Guess that test with more than 30 chars are notes
+  def is_modern_named_entity(chinese: str) -> bool:
+    """Guess whether the term is a modern named entity"""
+    return '·' in chinese
 
 
 def compare_cc_cedict_cnotes(in_fname: str, out_fname: str):
@@ -264,7 +287,7 @@ def compare_cc_cedict_cnotes(in_fname: str, out_fname: str):
   cedict = open_cc_cedict(in_fname)
   cnotes_dict = cndict.open_dictionary()
   sample = 0
-  luid = 117239
+  luid = 117348
   with open(out_fname, 'w') as out_file:
     for trad, entry in cedict.items():
       if trad not in cnotes_dict:
@@ -274,7 +297,8 @@ def compare_cc_cedict_cnotes(in_fname: str, out_fname: str):
             and len(trad) > 1
             and not entry_analysis.contains_notes
             and not len(entry.senses) > 1
-            and not entry_analysis.refers_to_variant):
+            and not entry_analysis.refers_to_variant
+            and not entry_analysis.is_modern_named_entity):
           grammar = entry_analysis.grammar
           traditional = trad
           if entry.simplified == trad:
