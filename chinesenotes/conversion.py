@@ -92,11 +92,11 @@ class ComparisonSummary:
                                    contains_notes)
     domain = EntryAnalyzer.guess_domain(entry.english)
     entry_analysis.domain = domain
-    subdomain = EntryAnalyzer.guess_subdomain(entry.english)
+    subdomain = EntryAnalyzer.guess_subdomain(entry)
     entry_analysis.subdomain = subdomain
-    entity_kind = EntryAnalyzer.guess_entity_kind(entry.english)
+    entity_kind = EntryAnalyzer.guess_entity_kind(entry)
     entry_analysis.entity_kind = entity_kind
-    is_modern_named_entity = EntryAnalyzer.is_modern_named_entity(simplified)
+    is_modern_named_entity = EntryAnalyzer.is_modern_named_entity(entry)
     entry_analysis.is_modern_named_entity = is_modern_named_entity
     if contains_alphanum:
       self.absent_contain_alphanum += 1
@@ -132,11 +132,21 @@ class EntryFormatter:
     self.entry = entry
     self.wdict = wdict
 
-  def add_space_slash(self) -> str:
-    """Adds space around a forward slash /"""
+  def reformat_english(self) -> str:
+    """Reformats the English equivalent /"""
     english = self.entry.english
     if '/' in english:
-      return english.replace('/', ' / ')
+      english = english.replace('/', ' / ')
+    to_delete = ['(botany) ',
+                 ' (computing)',
+                 '(dialect) ',
+                 ' (idiom)',
+                 '(literary) ',
+                 ' (medicine)',
+                 ' (physics)']
+    for term in to_delete:
+      if term in english:
+        english = english.replace(term, '')
     return english
 
   def reformat_pinyin(self) -> str:
@@ -147,7 +157,7 @@ class EntryFormatter:
     for token in tokens:
       token_entry = self.wdict[token]
       pinyin.append(token_entry.senses[0].pinyin)
-    if len(simplified) > 4:
+    if len(simplified) > 3:
       return ' '.join(pinyin)
     return ''.join(pinyin)
 
@@ -174,104 +184,264 @@ class EntryAnalyzer:
 
   def guess_domain(english: str) -> str:
     """Guess the term domain, default modern Chinese"""
-    if '(idiom)' in english:
-      return '成语\tIdiom'
+    if ('brand' in english or
+        'company' in english or
+        'website' in english):
+      return '商务\tCommerce'
     if ('(computing)' in english or
+       'computer' in english or
        'code' in english or
        'network' in english or
-       'server' in english):
+       'server' in english or
+       'software' in english):
       return '计算机科学\tComputer Science'
-    if ('City' in english or
+    if 'film' in english:
+      return '戏剧\tDrama'
+    if '(idiom)' in english:
+      return '成语\tIdiom'
+    if ('capital' in english or
+        'City' in english or
         'city' in english or
         'county' in english or
         'Lake' in english or
         'River' in english or
-        'state' in english):
+        'state' in english or
+        'town' in english or
+        'UK' in english):
       return '地方\tPlaces'
-    if 'film' in english:
-      return '戏剧\tDrama'
+    if ('archaic' in english or
+        '(literary)' in english or
+        '(old)' in english):
+      return '文言文\tLiterary Chinese'
     if 'linguistics' in english:
       return '语言学\tLinguistics'
+    if 'novelist' in english:
+      return '文学\tLiterature'
     return '现代汉语\tModern Chinese'
 
-  def guess_entity_kind(english: str) -> str:
+  def guess_entity_kind(entry: DictionaryEntry) -> str:
     """Guess the entity kind, default empty"""
+    english = entry.english
+    chinese = entry.simplified
+    if 'novelist' in english:
+      return '作者\tAuthor'
+    if 'constellation' in english:
+       return '星座\tConstellation'
+    if 'company' in english:
+       return '星座\tConstellation'
     if 'county' in english:
       return '县\tCounty'
-    if 'city' in english or 'City' in english:
+    if 'city' in english or 'City' in english or 'capital' in english:
       return '城市\tCity'
+    if 'Islands' in english:
+      return '群岛\tIslands'
+    if '鱼' in chinese or 'fish' in english:
+      return '鱼\tFish'
     if 'Lake' in english:
       return '湖\tLake'
-    if '(language)' in english:
+    if 'language' in english:
       return '语言\tLanguage'
+    if '(mineral)' in english:
+      return '矿物\tMineral'
+    if 'River' in english:
+      return '水名\tRiver'
+    if 'person name' in english:
+      return '人\tPerson'
+    if 'town' in english or 'UK' in english or 'prefecture' in english:
+      return '地名\tPlace Name'
+    if 'brand' in english:
+      return '产品\tProduct'
     if 'state' in english:
       return '州\tState'
+    if 'surname' in english:
+      return '姓氏\tSurname'
     return '\\N\t\\N'
 
   def guess_grammar(chinese: str, english: str) -> str:
     """Guess what the part of speech is"""
-    pos = 'noun'
     if english[0].isupper() or 'city' in english:
-      pos = 'proper noun'
-    elif len(chinese) > 3:
-      pos = 'set phrase'
-    elif len(english) > 1 and english[-2:] == 'ed':
-      pos = 'adjective'
-    elif len(english) > 1 and english[:2] == 'to':
-      pos = 'verb'
-    return pos
+      return 'proper noun'
+    if len(chinese) > 3:
+      return 'set phrase'
+    if len(english) > 1 and english[-2:] == 'ly':
+      return 'adverb'
+    if len(english) > 1 and english[-2:] == 'ed':
+      return 'adjective'
+    if len(english) > 2 and english[-3:] == 'ing':
+      return 'adjective'
+    if len(english) > 1 and english[:2] == 'to':
+      return 'verb'
+    return 'noun'
 
-  def guess_subdomain(english: str) -> str:
+  def guess_subdomain(entry: DictionaryEntry) -> str:
     """Guess the term subdomain, default none, later check manually"""
-    if 'nebula' in english or 'constellation' in english or 'galaxy' in english:
+    english = entry.english
+    chinese = entry.simplified
+    if ('agriculture' in english or
+        'farming' in english):
+      return '农业\tAgriculture'
+    if 'fine arts' in english:
+      return '艺术\tArt'
+    if ('astronomy' in english or
+        'nebula' in english or
+        'constellation' in english or
+        'galaxy' in english or
+        '(star)' in english):
       return '天文\tAstronomy'
-    if 'biology' in english:
+    if '脂肪' in chinese or 'biology' in english:
       return '生物学\tBiology'
-    if ('(chemistry)' in english
+    if 'botany' in english:
+      return '植物学\tBotany'
+    if 'acupuncture' in english or '(TCM)' in english:
+      return '中医\tChinese Medicine'
+    if ('毒素' in chinese
         or 'acid' in english
-        or 'tyl' in english
         or 'alcohol' in english
-        or 'oxide' in english):
+        or 'biochemistry' in english
+        or 'chemical' in english
+        or '(chemistry)' in english
+        or 'fluoride' in english
+        or 'molecular' in english
+        or 'oxide' in english
+        or 'sulfur' in english):
       return '化学\tChemistry'
-    if 'Christianity' in english or 'Testament' in english:
+    if ('Sichuan' in english or
+       'Anhui' in english or
+       'Hebei' in english):
+      return '中国\tChina'
+    if ('Bible' in english or
+        'biblical' in english or
+        'Christianity' in english or
+        'Testament' in english):
       return '基督教\tChristianity'
-    if '(dialect)' in english:
+    if 'dance' in english:
+      return '跳舞\tDancing'
+    if 'dialect' in english or 'erhua variant' in english:
       return '方言\tDialect'
-    if 'fruit' in english:
+    if 'economics' in english:
+      return '经济\tEconomics'
+    if ('(electronics)' in english or
+        '(elec.)' in english):
+      return '电子工程\tElectronic Engineering'
+    if 'Germany' in english:
+      return '欧洲\tEurope'
+    if ('finance' in english or
+        'accountancy' in english or
+        'accounting' in english):
+      return '财会\tFinance and Accounting'
+    if ('菜' in chinese or
+        'drink' in english or
+        'fruit' in english or
+        'food' in english):
       return '饮食\tFood and Drink'
+    if ('geology' in english or
+        '(mineral)' in english or
+        'rock' in english):
+      return '地质\tGeology'
+    if ('geography' in english or
+        'Islands' in english or
+        'peninsula' in english):
+      return '地理\tGeography'
     if 'geometry' in english:
       return '几何\tGeometry'
-    if '(law)' in english:
+    if 'grammar' in english:
+      return '语法\tGrammar'
+    if ('criminal' in english or
+        '(law)' in english):
       return '法律\tLaw'
-    if 'math' in english or 'algebra' in english:
+    if ('algebra' in english or
+        'equation' in english or
+        'math' in english):
       return '数学\tMathematics'
     if 'military' in english:
       return '军事\tMilitary'
-    if ('itis' in english
+    if ('激素' in chinese
+        or 'itis' in english
         or 'anatomy' in english
+        or 'coronary' in english
         or 'disease' in english
+        or 'disorder' in english
+        or 'erosis' in english
+        or 'fever' in english
         or 'physiology' in english
         or 'syndrome' in english
-        or 'virus' in english
-        or 'medical' in english):
+        or 'medical' in english
+        or 'medicine' in english
+        or '(med.)' in english
+        or 'vaccine' in english
+        or 'virus' in english):
       return '医学\tMedicine'
+    if 'music' in english or '(opera)' in english:
+      return '音乐\tMusic'
+    if 'deity' in english:
+      return '神话\tMythology'
     if '(name)' in english:
       return '名字\tNames'
-    if 'physics' in english or 'electric' in english:
+    if ('optics' in english or
+        'optical' in english):
+      return '光学\tOptics'
+    if 'dinosaur' in english:
+      return '古生物学\tPaleontology'
+    if 'philosophy' in english:
+      return '哲学\tPhilosophy'
+    if ('political' in english):
+      return '政治\tPolitics'
+    if 'psychology' in english or '(psych.)' in english:
+      return '心理学\tPsychology'
+    if ('physics' in english or
+        'electric' in english or
+        '(mechanics)' in english):
       return '物理\tPhysics'
+    if 'religion' in english:
+      return '宗教\tReligion'
     if '(coll.)' in english:
       return '口语\tSpoken Language'
-    if 'ball' in english or 'soccer' in english:
-      return '体育\tSport'
     if 'curse' in english:
       return '俚语\tSlang'
+    if 'ball' in english or 'soccer' in english or 'sport' in english:
+      return '体育\tSport'
+    if 'statistics' in english:
+      return '统计学\tStatistics'
+    if 'UK' in english:
+      return '英国\tEngland'
     if 'state' in english:
       return '美国\tUnited States'
+    if '鱼' in chinese or 'fish' in english or 'zoology' in english:
+      return '动物学\tZoology'
     return '\\N\t\\N'
 
-  def is_modern_named_entity(chinese: str) -> bool:
+  def is_modern_named_entity(entry: DictionaryEntry) -> bool:
     """Guess whether the term is a modern named entity"""
-    return '·' in chinese
+    chinese = entry.simplified
+    english = entry.english
+    if ('·' in chinese or
+        '大学' in chinese or
+        'Afghan' in english or
+        'brand' in english or
+        'Canadian' in english or
+        'Canada' in english or
+        'company' in english or
+        '，' in chinese or
+        'Germany' in english or
+        'Italy' in english or
+        'Japanese' in english or
+        '(name)' in english or
+        'Ireland' in english or
+        'Journal' in english or
+        'Norway' in english or
+        'person name' in english or
+        'philosopher' in english or
+        'Russian' in english or
+        'Spain' in english or
+        'state' in english or
+        'surname' in english or
+        'University' in english or
+        'video game' in english or
+        'website' in english):
+      return True
+    if len(chinese) > 3 and len(english) > 1 and english[0].isupper():
+      return True
+    return False
 
 
 def compare_cc_cedict_cnotes(in_fname: str, out_fname: str):
@@ -287,7 +457,7 @@ def compare_cc_cedict_cnotes(in_fname: str, out_fname: str):
   cedict = open_cc_cedict(in_fname)
   cnotes_dict = cndict.open_dictionary()
   sample = 0
-  luid = 117348
+  luid = 119438
   with open(out_fname, 'w') as out_file:
     for trad, entry in cedict.items():
       if trad not in cnotes_dict:
@@ -308,7 +478,7 @@ def compare_cc_cedict_cnotes(in_fname: str, out_fname: str):
           domain = entry_analysis.domain
           subdomain = entry_analysis.subdomain
           formatter = EntryFormatter(cnotes_dict, entry)
-          english = formatter.add_space_slash()
+          english = formatter.reformat_english()
           pinyin = formatter.reformat_pinyin()
           out_file.write(f'{luid}\t{entry.simplified}\t{traditional}\t'
               f'{pinyin}\t{english}\t{grammar}\t{entity_kind}\t{domain}\t'
