@@ -28,7 +28,7 @@ import argparse
 import logging
 import os
 import re
-from typing import Mapping
+from typing import List, Mapping
 
 from chinesenotes import charutil
 from chinesenotes import cndict
@@ -90,7 +90,7 @@ class ComparisonSummary:
                                    refers_to_variant,
                                    grammar,
                                    contains_notes)
-    domain = EntryAnalyzer.guess_domain(entry.english)
+    domain = EntryAnalyzer.guess_domain(entry)
     entry_analysis.domain = domain
     subdomain = EntryAnalyzer.guess_subdomain(entry)
     entry_analysis.subdomain = subdomain
@@ -137,16 +137,18 @@ class EntryFormatter:
     english = self.entry.english
     if '/' in english:
       english = english.replace('/', ' / ')
-    to_delete = ['(botany) ',
-                 ' (computing)',
-                 '(dialect) ',
-                 ' (idiom)',
-                 '(literary) ',
-                 ' (medicine)',
-                 ' (physics)']
+    to_delete = ['(anatomy)', '(botany)', '(chemistry)', '(computing)',
+                 '(computer)', '(coll.)',
+                 '(constellation)', '(dialect)', '(electronics)', '(finance)',
+                 '(geometry)', '(idiom)',
+                 '(law)', '(language)', '(literary)', '(math.)', '(medicine)',
+                 '(music)',
+                 '(mythology)', '(philosopher)', '(physics)', '(slang)',
+                 '(statistics)']
     for term in to_delete:
       if term in english:
         english = english.replace(term, '')
+        english = english.strip()
     return english
 
   def reformat_pinyin(self) -> str:
@@ -178,43 +180,45 @@ class EntryAnalyzer:
     """Guess whether the entry is a reference to a variant"""
     return self.p_refers_to_variant.match(english)
 
+  def check_keywords(keywords: List[str], target: str) -> bool:
+    """Check for any of the keywords in a target string"""
+    for keyword in keywords:
+      if keyword in target:
+        return True
+
   def contains_notes(english: str) -> bool:
     """Guess whether an English equivalent contains notes"""
     return len(english) > 30 # Guess that test with more than 30 chars are notes
 
-  def guess_domain(english: str) -> str:
+  def guess_domain(entry: DictionaryEntry) -> str:
     """Guess the term domain, default modern Chinese"""
-    if ('brand' in english or
-        'company' in english or
-        'website' in english):
+    english = entry.english
+    chinese = entry.simplified
+    comm_keywords = ['brand', 'company', 'website']
+    if EntryAnalyzer.check_keywords(comm_keywords, english):
       return '商务\tCommerce'
-    if ('(computing)' in english or
-       'computer' in english or
-       'code' in english or
-       'network' in english or
-       'server' in english or
-       'software' in english):
+    com_sci_keywords = ['algorithm', 'byte', 'computer', 'computing', 'code',
+                        'network', 'server', 'software']
+    if EntryAnalyzer.check_keywords(com_sci_keywords, english):
       return '计算机科学\tComputer Science'
-    if 'film' in english:
+    drama_keywords = ['film']
+    if EntryAnalyzer.check_keywords(drama_keywords, english):
       return '戏剧\tDrama'
+    if 'archaeological' in english or 'Khan' in english:
+      return '历史\tHistory'
     if '(idiom)' in english:
       return '成语\tIdiom'
-    if ('capital' in english or
-        'City' in english or
-        'city' in english or
-        'county' in english or
-        'Lake' in english or
-        'River' in english or
-        'state' in english or
-        'town' in english or
-        'UK' in english):
+    place_keywords = ['capital', 'City', 'city', 'Lake', 'River', 'state',
+                      'town', 'UK']
+    place_keywords_zh = ['区', '镇']
+    if (EntryAnalyzer.check_keywords(place_keywords, english) or
+        EntryAnalyzer.check_keywords(place_keywords_zh, chinese)):
       return '地方\tPlaces'
-    if ('archaic' in english or
-        '(literary)' in english or
-        '(old)' in english):
-      return '文言文\tLiterary Chinese'
     if 'linguistics' in english:
       return '语言学\tLinguistics'
+    lit_chin_keywords = ['archaic', '(literary)', '(old)']
+    if EntryAnalyzer.check_keywords(lit_chin_keywords, english):
+      return '文言文\tLiterary Chinese'
     if 'novelist' in english:
       return '文学\tLiterature'
     return '现代汉语\tModern Chinese'
@@ -237,17 +241,23 @@ class EntryAnalyzer:
       return '群岛\tIslands'
     if '鱼' in chinese or 'fish' in english:
       return '鱼\tFish'
+    if '虫' in chinese:
+      return '昆虫\tInsect'
     if 'Lake' in english:
       return '湖\tLake'
     if 'language' in english:
       return '语言\tLanguage'
     if '(mineral)' in english:
       return '矿物\tMineral'
+    if 'nebula' in english:
+      return '星云\tNebula'
     if 'River' in english:
       return '水名\tRiver'
-    if 'person name' in english:
+    if 'Khan' in english or 'person name' in english or 'philosopher' in english:
       return '人\tPerson'
     if 'town' in english or 'UK' in english or 'prefecture' in english:
+      return '地名\tPlace Name'
+    if '镇' in chinese:
       return '地名\tPlace Name'
     if 'brand' in english:
       return '产品\tProduct'
@@ -276,137 +286,154 @@ class EntryAnalyzer:
   def guess_subdomain(entry: DictionaryEntry) -> str:
     """Guess the term subdomain, default none, later check manually"""
     english = entry.english
-    chinese = entry.simplified
-    if ('agriculture' in english or
-        'farming' in english):
+    simplified = entry.simplified
+    traditional = entry.traditional
+    ag_keywords = ['agriculture', 'farming']
+    if EntryAnalyzer.check_keywords(ag_keywords, english):
       return '农业\tAgriculture'
-    if 'fine arts' in english:
+    arts_keywords = ['fine arts']
+    if EntryAnalyzer.check_keywords(arts_keywords, english):
       return '艺术\tArt'
-    if ('astronomy' in english or
-        'nebula' in english or
-        'constellation' in english or
-        'galaxy' in english or
-        '(star)' in english):
+    astr_keywords = ['astronomy', 'constellation', 'nebula', 'galaxy', '(star)']
+    astr_keywords_zh = ['星']
+    if (EntryAnalyzer.check_keywords(astr_keywords, english) or
+        EntryAnalyzer.check_keywords(astr_keywords_zh, simplified)):
       return '天文\tAstronomy'
-    if '脂肪' in chinese or 'biology' in english:
+    bio_keywords = ['bacteria', 'biology', '(cell)', 'organism']
+    bio_keywords_zh = ['脂肪']
+    if (EntryAnalyzer.check_keywords(bio_keywords, english) or
+         EntryAnalyzer.check_keywords(bio_keywords_zh, simplified)):
       return '生物学\tBiology'
-    if 'botany' in english:
+    bot_keywords = ['botany']
+    if EntryAnalyzer.check_keywords(bot_keywords, english):
       return '植物学\tBotany'
-    if 'acupuncture' in english or '(TCM)' in english:
-      return '中医\tChinese Medicine'
-    if ('毒素' in chinese
-        or 'acid' in english
-        or 'alcohol' in english
-        or 'biochemistry' in english
-        or 'chemical' in english
-        or '(chemistry)' in english
-        or 'fluoride' in english
-        or 'molecular' in english
-        or 'oxide' in english
-        or 'sulfur' in english):
+    chin_med_keywords = ['acupuncture', 'TCM']
+    if EntryAnalyzer.check_keywords(chin_med_keywords, english):
+     return '中医\tChinese Medicine'
+    chem_keywords = ['acid', 'C2', 'alcohol', 'biochemistry', 'chemical',
+                     'chemistry', 'chloride', 'fluoride', 'lactose',
+                     'molecular','oxide', 'sulfur']
+    if EntryAnalyzer.check_keywords(chem_keywords, english):
       return '化学\tChemistry'
-    if ('Sichuan' in english or
-       'Anhui' in english or
-       'Hebei' in english):
+    chem_keywords_zh = ['毒素']
+    if EntryAnalyzer.check_keywords(chem_keywords_zh, simplified):
+      return '化学\tChemistry'
+    china_keywords = ['Sichuan', 'Anhui', 'Hainan', 'Hebei', 'Hong Kong', 'Xinjiang']
+    if EntryAnalyzer.check_keywords(china_keywords, english):
       return '中国\tChina'
-    if ('Bible' in english or
-        'biblical' in english or
-        'Christianity' in english or
-        'Testament' in english):
+    chr_keywords = ['Bible', 'biblical', 'Christianity', 'Testament']
+    if EntryAnalyzer.check_keywords(chr_keywords, english):
       return '基督教\tChristianity'
-    if 'dance' in english:
+    cloth_keywords_zh = ['衫', '鞋']
+    if EntryAnalyzer.check_keywords(cloth_keywords_zh, simplified):
+      return '服装\tClothing'
+    dance_keywords = ['dance']
+    if EntryAnalyzer.check_keywords(dance_keywords, english):
       return '跳舞\tDancing'
-    if 'dialect' in english or 'erhua variant' in english:
+    dialect_keywords = ['dialect', 'erhua variant']
+    if EntryAnalyzer.check_keywords(dialect_keywords, english):
       return '方言\tDialect'
-    if 'economics' in english:
+    econ__keywords = ['economics']
+    if EntryAnalyzer.check_keywords(econ__keywords, english):
       return '经济\tEconomics'
-    if ('(electronics)' in english or
-        '(elec.)' in english):
+    elec_keywords = ['circuit', '(electronics)', '(elec.)', 'semiconductor']
+    if EntryAnalyzer.check_keywords(elec_keywords, english):
       return '电子工程\tElectronic Engineering'
-    if 'Germany' in english:
-      return '欧洲\tEurope'
-    if ('finance' in english or
-        'accountancy' in english or
-        'accounting' in english):
-      return '财会\tFinance and Accounting'
-    if ('菜' in chinese or
-        'drink' in english or
-        'fruit' in english or
-        'food' in english):
-      return '饮食\tFood and Drink'
-    if ('geology' in english or
-        '(mineral)' in english or
-        'rock' in english):
-      return '地质\tGeology'
-    if ('geography' in english or
-        'Islands' in english or
-        'peninsula' in english):
-      return '地理\tGeography'
-    if 'geometry' in english:
-      return '几何\tGeometry'
-    if 'grammar' in english:
-      return '语法\tGrammar'
-    if ('criminal' in english or
-        '(law)' in english):
-      return '法律\tLaw'
-    if ('algebra' in english or
-        'equation' in english or
-        'math' in english):
-      return '数学\tMathematics'
-    if 'military' in english:
-      return '军事\tMilitary'
-    if ('激素' in chinese
-        or 'itis' in english
-        or 'anatomy' in english
-        or 'coronary' in english
-        or 'disease' in english
-        or 'disorder' in english
-        or 'erosis' in english
-        or 'fever' in english
-        or 'physiology' in english
-        or 'syndrome' in english
-        or 'medical' in english
-        or 'medicine' in english
-        or '(med.)' in english
-        or 'vaccine' in english
-        or 'virus' in english):
-      return '医学\tMedicine'
-    if 'music' in english or '(opera)' in english:
-      return '音乐\tMusic'
-    if 'deity' in english:
-      return '神话\tMythology'
-    if '(name)' in english:
-      return '名字\tNames'
-    if ('optics' in english or
-        'optical' in english):
-      return '光学\tOptics'
-    if 'dinosaur' in english:
-      return '古生物学\tPaleontology'
-    if 'philosophy' in english:
-      return '哲学\tPhilosophy'
-    if ('political' in english):
-      return '政治\tPolitics'
-    if 'psychology' in english or '(psych.)' in english:
-      return '心理学\tPsychology'
-    if ('physics' in english or
-        'electric' in english or
-        '(mechanics)' in english):
-      return '物理\tPhysics'
-    if 'religion' in english:
-      return '宗教\tReligion'
-    if '(coll.)' in english:
-      return '口语\tSpoken Language'
-    if 'curse' in english:
-      return '俚语\tSlang'
-    if 'ball' in english or 'soccer' in english or 'sport' in english:
-      return '体育\tSport'
-    if 'statistics' in english:
-      return '统计学\tStatistics'
-    if 'UK' in english:
+    eng_keywords = ['UK']
+    if EntryAnalyzer.check_keywords(eng_keywords, english):
       return '英国\tEngland'
-    if 'state' in english:
+    eu_keywords = ['Germany', 'Holland']
+    if EntryAnalyzer.check_keywords(eu_keywords, english):
+      return '欧洲\tEurope'
+    fin_keywords = ['accountancy', 'accounting', 'finance']
+    if EntryAnalyzer.check_keywords(fin_keywords, english):
+      return '财会\tFinance and Accounting'
+    food_keywords = ['drink', 'food']
+    food_keywords_zh = ['菜', '餐', '茶',  '酱', '咖啡', '米', '烧']
+    food_keywords_zh_tw = ['麵']
+    if (EntryAnalyzer.check_keywords(food_keywords, english) or
+        EntryAnalyzer.check_keywords(food_keywords_zh, simplified) or
+        EntryAnalyzer.check_keywords(food_keywords_zh_tw, traditional)):
+      return '饮食\tFood and Drink'
+    geog_keywords = ['geography', 'Islands', 'Ocean', 'ocean', 'peninsula']
+    if EntryAnalyzer.check_keywords(geog_keywords, english):
+      return '地理\tGeography'
+    geo_keywords = ['geology', 'mineral', 'rock']
+    if EntryAnalyzer.check_keywords(geo_keywords, english):
+      return '地质\tGeology'
+    geom_keywords = ['geometry']
+    if EntryAnalyzer.check_keywords(geom_keywords, english):
+      return '几何\tGeometry'
+    gram_keywords = ['grammar']
+    if EntryAnalyzer.check_keywords(gram_keywords, english):
+      return '语法\tGrammar'
+    law_keywords = ['criminal', '(law)']
+    if EntryAnalyzer.check_keywords(law_keywords, english):
+      return '法律\tLaw'
+    math_keywords = ['algebra', 'equation', 'math']
+    if EntryAnalyzer.check_keywords(math_keywords, english):
+      return '数学\tMathematics'
+    med_keywords = ['itis', 'anatomy', 'coronary', 'disease', 'disorder',
+                    'erosis', 'fever', 'medical', 'medicine', '(med.)',
+                    'physiology', 'syndrome', 'therapy', 'vaccine', 'virus']
+    med_keywords_zh = ['病', '激素', '症']
+    if (EntryAnalyzer.check_keywords(med_keywords, english) or
+        EntryAnalyzer.check_keywords(med_keywords_zh, simplified)):
+      return '医学\tMedicine'
+    mil_keywords = ['bomb' , 'military', 'missile', 'warfare', 'weapon']
+    if EntryAnalyzer.check_keywords(mil_keywords, english):
+      return '军事\tMilitary'
+    music_keywords = ['music', '(opera)']
+    music_keywords_zh = ['曲']
+    if (EntryAnalyzer.check_keywords(music_keywords, english) or 
+        EntryAnalyzer.check_keywords(music_keywords_zh, simplified)):
+       return '音乐\tMusic'
+    myth_keywords = ['deity', 'mythology']
+    if EntryAnalyzer.check_keywords(myth_keywords, english):
+      return '神话\tMythology'
+    names_keywords = ['(name)']
+    if EntryAnalyzer.check_keywords(names_keywords, english):
+      return '名字\tNames'
+    optics_keywords = ['optical', 'optics']
+    if EntryAnalyzer.check_keywords(names_keywords, english):
+      return '光学\tOptics'
+    pal_keywords = ['dinosaur', 'fossil']
+    if EntryAnalyzer.check_keywords(pal_keywords, english):
+      return '古生物学\tPaleontology'
+    phil_keywords = ['philosopher', 'philosophy']
+    if EntryAnalyzer.check_keywords(phil_keywords, english):
+      return '哲学\tPhilosophy'
+    pol_keywords = ['political']
+    if EntryAnalyzer.check_keywords(pol_keywords, english):
+      return '政治\tPolitics'
+    pysc_keywords = ['(psych.)', 'psychology']
+    if EntryAnalyzer.check_keywords(pysc_keywords, english):
+      return '心理学\tPsychology'
+    phys_keywords = ['(mechanics)', 'physics']
+    if EntryAnalyzer.check_keywords(phys_keywords, english):
+      return '物理\tPhysics'
+    rel_keywords = ['religion']
+    if EntryAnalyzer.check_keywords(rel_keywords, english):
+      return '宗教\tReligion'
+    spok_keywords = ['(coll.)']
+    if EntryAnalyzer.check_keywords(spok_keywords, english):
+      return '口语\tSpoken Language'
+    slang_keywords = ['curse', 'netspeak', 'slang']
+    if EntryAnalyzer.check_keywords(slang_keywords, english):
+      return '俚语\tSlang'
+    sport_keywords = ['ball', 'soccer', 'sport']
+    if EntryAnalyzer.check_keywords(sport_keywords, english):
+      return '体育\tSport'
+    stats_keywords = ['statistics']
+    if EntryAnalyzer.check_keywords(stats_keywords, english):
+      return '统计学\tStatistics'
+    us_keywords = ['state', 'Pennsylvania']
+    if EntryAnalyzer.check_keywords(stats_keywords, english):
       return '美国\tUnited States'
-    if '鱼' in chinese or 'fish' in english or 'zoology' in english:
+    zoo_keywords = ['fish', 'zoology']
+    zoo_keywords_zh = ['虫', '羊', '鱼']
+    if (EntryAnalyzer.check_keywords(zoo_keywords, english) or
+        EntryAnalyzer.check_keywords(zoo_keywords_zh, simplified)):
       return '动物学\tZoology'
     return '\\N\t\\N'
 
@@ -414,30 +441,16 @@ class EntryAnalyzer:
     """Guess whether the term is a modern named entity"""
     chinese = entry.simplified
     english = entry.english
-    if ('·' in chinese or
-        '大学' in chinese or
-        'Afghan' in english or
-        'brand' in english or
-        'Canadian' in english or
-        'Canada' in english or
-        'company' in english or
-        '，' in chinese or
-        'Germany' in english or
-        'Italy' in english or
-        'Japanese' in english or
-        '(name)' in english or
-        'Ireland' in english or
-        'Journal' in english or
-        'Norway' in english or
-        'person name' in english or
-        'philosopher' in english or
-        'Russian' in english or
-        'Spain' in english or
-        'state' in english or
-        'surname' in english or
-        'University' in english or
-        'video game' in english or
-        'website' in english):
+    entity_keywords = ['Afghan', 'Airlines', 'brand', 'Canadian', 'Canada', 'Colorado', 'company',
+                       'France', 'French', 'Germany', 'Holland', 'Idaho', 'Indonesian',
+                       'Italy', 'Ireland', 'Japanese', 'Journal',
+                       '(name)', 'Korea', 'Nevada', 'Norway', 'person name',
+                       'proper name',
+                       'Pakistan', 'Pennsylvania', 'Russia', 'Spain', 'state', 'surname',
+                       'Sudan', 'University', 'video game', 'website']
+    entity_keywords_zh = ['·', '，']
+    if (EntryAnalyzer.check_keywords(entity_keywords, english) or
+        EntryAnalyzer.check_keywords(entity_keywords_zh, chinese)):
       return True
     if len(chinese) > 3 and len(english) > 1 and english[0].isupper():
       return True
@@ -457,7 +470,7 @@ def compare_cc_cedict_cnotes(in_fname: str, out_fname: str):
   cedict = open_cc_cedict(in_fname)
   cnotes_dict = cndict.open_dictionary()
   sample = 0
-  luid = 119438
+  luid = 119966
   with open(out_fname, 'w') as out_file:
     for trad, entry in cedict.items():
       if trad not in cnotes_dict:
