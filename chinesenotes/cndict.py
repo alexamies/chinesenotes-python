@@ -140,7 +140,13 @@ def _load_dictionary(dict_file: TextIO,
         if len(fields) >= 14 and fields[14] != '\\N':
           notes = fields[14]
         if fields and len(fields) >= 15 and fields[15] != '\\N':
-          headword_id = fields[15]
+          try:
+            headword_id = int(fields[15])
+          except ValueError as e:
+            log.error('Error parsing headword_id for ', simplified, ': ', 
+                      headword_id)
+        else:
+          log.error(f'Invalid headword_id for ', simplified, ': ', headword_id)
       sense = WordSense(simplified, traditional, pinyin, english)
       if grammar:
         sense.grammar = grammar
