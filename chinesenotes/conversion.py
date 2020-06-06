@@ -94,13 +94,13 @@ class ComparisonSummary:
                                    refers_to_variant,
                                    grammar,
                                    contains_notes)
-    domain = EntryAnalyzer.guess_domain(entry)
+    domain = self.analyzer.guess_domain(entry)
     entry_analysis.domain = domain
     subdomain = EntryAnalyzer.guess_subdomain(entry)
     entry_analysis.subdomain = subdomain
     entity_kind = EntryAnalyzer.guess_entity_kind(entry)
     entry_analysis.entity_kind = entity_kind
-    is_modern_named_entity = EntryAnalyzer.is_modern_named_entity(entry)
+    is_modern_named_entity = self.analyzer.is_modern_named_entity(entry)
     entry_analysis.is_modern_named_entity = is_modern_named_entity
     ignore = EntryAnalyzer.ignore(entry)
     entry_analysis.ignore = ignore
@@ -146,6 +146,8 @@ class EntryFormatter:
     """Constructor"""
     self.entry = entry
     self.wdict = wdict
+    self._idiom_re = re.compile(r'.*\(idiom, (.*)\)', re.IGNORECASE)
+    self._loanword_re = re.compile(r'.*\((loanword.*)\)', re.IGNORECASE)
     self._notes_re = re.compile(r'.*(county in.+'
                                 r'|county of.+'
                                 r'|county level city.+'
@@ -159,10 +161,15 @@ class EntryFormatter:
                                 ')$',
                                 re.IGNORECASE)
     self._pinyin_re = re.compile(r'.*(\[.*\]).*')
-    self._abbreviation_re = re.compile(r'.*(/.?abbr. for)(.+)$')
+    self._pipe_re = re.compile(r'.* (.+\|).*')
+    self._abbreviation_re = re.compile(r'.*(/.?abbr. '
+                                       r'|\(abbr. '
+                                       r'|, abbr. )(.+)$')
     self._classifier_re = re.compile(r'.*(/ CL:.+)$')
-    self._also_re = re.compile(r'.*(/.?also written|/.?see also)(.+)$')
+    self._also_re = re.compile(r'.*(/.?also written|/.?see also|/.?same as)(.+)$')
     self._unit_re = re.compile(r'.*\((Chinese unit .+)\)')
+    self._also_pron_re = re.compile(r'.*(/ also pr.+)$')
+    self._year_re = re.compile(r'(.*)\((.*[0-9][0-9][0-9][0-9].*)\)(.*)')
 
   def format_notes(self, trad):
     """Format notes with reference and moving from equivalent as needed"""
@@ -171,25 +178,28 @@ class EntryFormatter:
     m = self._notes_re.match(english)
     if m:
       note = m.group(1)
-      m2 = self._pinyin_re.match(note)
-      if m2:
-        pinyin_br = m2.group(1)
-        note = note.replace(pinyin_br, '')
+      note = note[0].upper() + note[1:]
+      notes.append(note)
+    m_idiom = self._idiom_re.match(english)
+    if m_idiom:
+      note = m_idiom.group(1)
+      note = note[0].upper() + note[1:]
+      note = note.replace('"', '')
+      notes.append(note)
+    m_loanword = self._loanword_re.match(english)
+    if m_loanword:
+      note = m_loanword.group(1)
       note = note[0].upper() + note[1:]
       notes.append(note)
     m_abbrev = self._abbreviation_re.match(english)
     if m_abbrev:
-      note = 'Abbreviation for ' + m_abbrev.group(2)
+      note = 'Abbreviation ' + m_abbrev.group(2)
       notes.append(note)
     m_also = self._also_re.match(english)
     if m_also:
       note = m_also.group(1) + m_also.group(2)
       note = note[1:].strip()
       note = note[0].upper() + note[1:]
-      m2 = self._pinyin_re.match(note)
-      if m2:
-        pinyin_br = m2.group(1)
-        note = note.replace(pinyin_br, '')
       notes.append(note)
     m_unit = self._unit_re.match(english)
     if m_unit:
@@ -207,24 +217,53 @@ class EntryFormatter:
       notes.append('Derogatory')
     if '(bird species of China)' in english:
       notes.append('Bird species of China')
+    m_year = self._year_re.match(english)
+    if m_year:
+      explanation = m_year.group(3)
+      if explanation:
+        if explanation[0] == ',':
+          explanation = explanation[1:]
+          explanation = explanation.strip()
+        explanation = explanation[0].upper() + explanation[1:]
+        note = m_year.group(2) + '; ' + explanation
+      else:
+        note = m_year.group(2)
+      notes.append(note)
     parts = []
     if notes:
       notes_str = '; '.join(notes)
       parts.append(notes_str)
     ref = f'(CC-CEDICT \'{trad}\')'
     parts.append(ref)
-    return ' '.join(parts)
+    notes = ' '.join(parts)
+    # Delete pinyin in notes
+    m_pinyin = self._pinyin_re.match(notes)
+    if m_pinyin:
+      pinyin_br = m_pinyin.group(1)
+      notes = notes.replace(pinyin_br, '')
+    # Replace trad|simplified in notes with simplified only
+    m_pipe = self._pipe_re.match(notes)
+    if m_pipe:
+      trad_alt = m_pipe.group(1)
+      notes = notes.replace(trad_alt, '')
+    return notes
 
   def reformat_english(self) -> str:
     """Reformats the English equivalent /"""
     english = self.entry.english
-    if '/' in english:
-      english = english.replace('/', ' / ')
     if '; ' in english:
       english = english.replace(';', '/')
     m = self._notes_re.match(english)
     if m:
       english = english.replace(m.group(1), '')
+    m_idiom = self._idiom_re.match(english)
+    if m_idiom:
+      note = '(idiom, ' + m_idiom.group(1) + ')'
+      english = english.replace(note, '')
+    m_loanword = self._loanword_re.match(english)
+    if m_loanword:
+      note = '(' + m_loanword.group(1) + ')'
+      english = english.replace(note, '')
     m_abbrev = self._abbreviation_re.match(english)
     if m_abbrev:
       note = m_abbrev.group(1) + m_abbrev.group(2)
@@ -241,6 +280,12 @@ class EntryFormatter:
     if m_unit:
       note = '(' + m_unit.group(1) + ')'
       english = english.replace(note, '')
+    m_also_pron = self._also_pron_re.match(english)
+    if m_also_pron:
+      english = english.replace(m_also_pron.group(1), '')
+    m_year = self._year_re.match(english)
+    if m_year:
+      english = m_year.group(1)
     to_delete = ['"', '(accountancy)', '(accounting)', '(agriculture)',
                  '(anatomy)',
                  '(archaic term)', '(arch.)', '(archaic)', '(archeology)',
@@ -255,19 +300,20 @@ class EntryFormatter:
                  '(dance)', '(derog.)',
                  '(economics)',
                  '(elec.)', '(electrical engineering)', '(electronics)',
-                 'ethnic minority', 'fig.',
+                 'ethnic minority', '(fig.)', 'fig.',
                  '(finance)',
                  '(geography)', '(geology)', '(geometry)', '(grammar)',
                  '(history)', '(idiom)', 'in Xinjiang',
                  '(interjection)', '(Internet slang)', ', Jilin',
-                 '(law)', '(language)', '(linguistics)', 'lit.', '(literary)',
+                 '(law)', '(language)', '(linguistics)', '(lit.)', 'lit.',
+                 '(literary)',
                  '(loanword)', '- Martial Art', '(math.)', '(math)',
                  '(medical term)', '(medicine)', '(military)',
                  '(molecular biology)', '(music)',
                  '(mythology)', 'of Beijing', 'of Hong Kong', '(old)',
                  '(old usage)',
                  '(onom.)',
-                 '(philosopher)', '(philosophy)', '(photography)',
+                 '(philosopher)', '(philosophy)', '(photography)', '(proverb)',
                  '(psychology)',
                  '(physics)', ', Shanghai',
                  '(slang)', '(sport)', '(sports)',
@@ -281,7 +327,16 @@ class EntryFormatter:
     if m2:
       pinyin_br = m2.group(1)
       english = english.replace(pinyin_br, '')
-    return english.strip()
+    if '/' in english:
+      parts = english.split('/')
+      sparts = []
+      for part in parts:
+        sparts.append(part.strip())
+      english = ' / '.join(sparts)
+    english = english.strip()
+    if len(english) > 100:
+      english = EntryFormatter.shorten_english(english)
+    return english
 
   def reformat_pinyin(self) -> str:
     """Reformats the pinyin string /"""
@@ -289,15 +344,31 @@ class EntryFormatter:
     tokens = cndict.tokenize_exclude_whole(self.wdict, simplified)
     pinyin = []
     for token in tokens:
-      try:
-        token_entry = self.wdict[token]
-        pinyin.append(token_entry.senses[0].pinyin)
-      except KeyError as ex:
-        print(f'reformat_pinyin KeyError {self.entry.traditional}')
-        raise
+      if token == '·':
+        #pinyin.append(' ')
+        pass
+      elif token == '，':
+        pinyin.append(', ')
+      else:
+        try:
+          token_entry = self.wdict[token]
+          pinyin.append(token_entry.senses[0].pinyin)
+        except KeyError as ex:
+          print(f'reformat_pinyin KeyError {self.entry.traditional}')
+          raise
     if len(simplified) > 3:
-      return ' '.join(pinyin)
+      pinyin = ' '.join(pinyin)
+      pinyin = pinyin.replace(" , ", ", ")
+      pinyin = pinyin.replace(",  ", ", ")
+      return pinyin
     return ''.join(pinyin)
+
+  def shorten_english(english) -> str:
+    """Shortens the English equivalent string """
+    parts = english.split(' / ')
+    if len(parts) > 1:
+      english =' / '.join(parts[:len(parts)-1])
+    return english
 
 
 class EntryAnalyzer:
@@ -305,6 +376,11 @@ class EntryAnalyzer:
 
   def __init__(self):
     self.p_contains_alphanum = re.compile('.*[a-zA-Z0-9]+')
+    self.p_contains_16xx = re.compile('.*16[0-9][0-9].*')
+    self.p_contains_17xx = re.compile('.*17[0-9][0-9].*')
+    self.p_contains_18xx = re.compile('.*18[0-9][0-9].*')
+    self.p_contains_19xx = re.compile('.*19[1-9][0-9].*')
+    self.p_contains_2xxx = re.compile('.*2[0-2][0-9][0-9].*')
     self.p_refers_to_variant= re.compile('(variant|see)')
 
 
@@ -314,7 +390,7 @@ class EntryAnalyzer:
 
   def contains_punctuation(chinese: str) -> bool:
     """Checks whether a text string contains any Chinese punctuation"""
-    if '、' in chinese:
+    if '、' in chinese or '，' in chinese:
       # print(f'Contains punc: {chinese}')
       return True
 
@@ -330,37 +406,47 @@ class EntryAnalyzer:
 
   def contains_notes(english: str) -> bool:
     """Guess whether an English equivalent contains notes"""
-    return len(english) > 55 # Guess that test with more chars are notes
+    return len(english) > 70 # Guess that test with more chars are notes
 
-  def guess_domain(entry: DictionaryEntry) -> str:
+  def guess_domain(self, entry: DictionaryEntry) -> str:
     """Guess the term domain, default modern Chinese"""
     english = entry.english
     chinese = entry.simplified
     if 'Buddha' in english or 'Buddhism' in english or '寺' in chinese:
        return '佛教\tBuddhism'
-    comm_keywords = ['brand', 'company', 'website']
+    comm_keywords = ['Airlines', 'Bank', 'brand', 'CEO', 'Company', 'company',
+                     'Corp.',
+                     'Corporation', 'website']
     if EntryAnalyzer.check_keywords(comm_keywords, english):
       return '商务\tCommerce'
     com_sci_keywords = ['algorithm', 'byte', 'computer', 'computing', 'code',
                         'network', 'server', 'software']
     if EntryAnalyzer.check_keywords(com_sci_keywords, english):
       return '计算机科学\tComputer Science'
-    drama_keywords = ['film']
+    drama_keywords = ['anime', 'film']
     if EntryAnalyzer.check_keywords(drama_keywords, english):
       return '戏剧\tDrama'
-    history_keywords = ['archaeological', 'dynasty', '(history)', 'Khan']
+    education_keywords = ['University']
+    if EntryAnalyzer.check_keywords(education_keywords, english):
+      return '教育\tEducation'
+    if (self.p_contains_16xx.match(english) or
+        self.p_contains_17xx.match(english) or
+        self.p_contains_18xx.match(english)):
+      return '历史\tHistory'
+    history_keywords = ['archaeological', 'Battle', 'Cultural Revolution',
+                         'dynasty', '(history)',
+                        'Incident', 'Khan', 'Mao']
     if (EntryAnalyzer.check_keywords(history_keywords, english)):
       return '历史\tHistory'
-    if '(idiom)' in english:
+    if 'idiom' in english and len(chinese) == 4:
       return '成语\tIdiom'
-    place_keywords = ['capital ', ' city', 'City', 'county', 'County',
-                      'Indonesia', 'Island', 'Lake',
-                      'Macau', 'place in', 'River', 'Myanmar', 'state',
-                      'town', 'UK', 'Vietnam']
-    place_keywords_zh = ['庙', '湾', '区', '县', '镇']
-    if (EntryAnalyzer.check_keywords(place_keywords, english) or
-        EntryAnalyzer.check_keywords(place_keywords_zh, chinese)):
-      return '地方\tPlaces'
+    gov_keywords = ['Administration', 'Agency', 'bureau', 'Committee', 
+                    'Commission', 'Department', 'Education',
+                    'government',
+                    'National',
+                    'Patriotic', 'People\'s']
+    if EntryAnalyzer.check_keywords(gov_keywords, english):
+      return '政府\tGovernment'
     ling_keywords = ['linguistics', 'phonetics', 'phonology']
     if EntryAnalyzer.check_keywords(ling_keywords, english):
       return '语言学\tLinguistics'
@@ -368,36 +454,60 @@ class EntryAnalyzer:
                           '(old)', '(old usage)']
     if EntryAnalyzer.check_keywords(lit_chin_keywords, english):
       return '文言文\tLiterary Chinese'
-    if 'novelist' in english:
+    literature_keywords = ['novelist', 'writer']
+    if EntryAnalyzer.check_keywords(literature_keywords, english):
       return '文学\tLiterature'
+    media_keywords = ['Publishing', 'Press', 'TV']
+    if EntryAnalyzer.check_keywords(media_keywords, english):
+      return '媒体\tMedia'
+    place_keywords = ['capital ', ' city', 'City', 'county', 'County',
+                      'Indonesia', 'Island', 'Lake',
+                      'Macau', 'place in', 'River', 'Myanmar',
+                      'town', 'UK', 'Vietnam']
+    place_keywords_zh = ['庙', '湾', '区', '县', '镇']
+    if (EntryAnalyzer.check_keywords(place_keywords, english) or
+        EntryAnalyzer.check_keywords(place_keywords_zh, chinese)):
+      return '地方\tPlaces'
+    pol_keywords = ['politician', 'political']
+    if EntryAnalyzer.check_keywords(pol_keywords, english):
+      return '政治\tPolitics'
+    if '(proverb)' in english:
+      return '谚语\tProverb'
+    if '(idiom)' in english and len(chinese) > 4:
+      return '谚语\tProverb'
+    if 'physicist' in english:
+      return '机科学\tScience'
     return '现代汉语\tModern Chinese'
 
   def guess_entity_kind(entry: DictionaryEntry) -> str:
     """Guess the entity kind, default empty"""
     english = entry.english
     chinese = entry.simplified
-    animal_keywords_zh = ['驼', '鹿', '蟹', '猫', '狸', '獾', '熊', '猿']
+    animal_keywords_zh = ['驼', '蟹', '猫', '狸', '獾', '猿']
     if EntryAnalyzer.check_keywords(animal_keywords_zh, chinese):
       return '动物\tAnimal'
     if 'novelist' in english:
       return '作者\tAuthor'
+    if 'Bank' in english:
+      return '银行\tBank'
     bird_keywords = ['bird species']
     bird_keywords_zh = ['鹭', '鸟', '鹉', '隼']
     if (EntryAnalyzer.check_keywords(bird_keywords, english) or
         EntryAnalyzer.check_keywords(bird_keywords_zh, chinese)):
        return '鸟\tBird'
-    if '寺' in chinese:
-       return '寺庙\tTemple'
     if 'constellation' in english:
        return '星座\tConstellation'
-    if 'company' in english:
+    company_keywords = ['Airlines', 'Company', 'company', 'Corp.',
+                        'Corporation', 'Press',
+                        'Publishing']
+    if EntryAnalyzer.check_keywords(company_keywords, english):
        return '公司\tCompany'
+    if 'district' in english or 'District' in english:
+      return '地区\tDistrict'
     if ' city' in english or 'City' in english or 'capital' in english:
       return '城市\tCity'
     if 'county' in english or 'County' in english:
       return '县\tCounty'
-    if 'district' in english or 'District' in english:
-      return '地区\tDistrict'
     eth_keywords = ['ethnic group', 'ethnic minority']
     if EntryAnalyzer.check_keywords(eth_keywords, english):
       return '民族\tEthnic Group'
@@ -418,31 +528,51 @@ class EntryAnalyzer:
       return '矿物\tMineral'
     if 'nebula' in english:
       return '星云\tNebula'
-    if 'River' in english:
-      return '水名\tRiver'
-    if 'Khan' in english or 'person name' in english or 'philosopher' in english:
+    person_keywords = ['activist', 'actor', 'adventurer', 'adviser',
+                       'ambassador',
+                       'artist',
+                       'astronomer', 'author', 'brother', 'CEO', 'chemist',
+                       'composer', 'dictator', 'diplomat', 'doctor',
+                       'economist', 'educator',
+                       'explorer',
+                       'founder', 'inventor',
+                       'Khan', 'leader', 'loyalist',
+                       'mathematician', 'martyr', 'minister', 'missionary',
+                       'officer',
+                       'painter',
+                       'person name',
+                       'philosopher', 'pioneer', 'poet',
+                       'physicist', 'psychologist', 'politician',
+                       'president', 'psychiatrist', 'scientist', 'Secretary',
+                       'sociologist', 'theorist', 'warlord',
+                       'writer']
+    if EntryAnalyzer.check_keywords(person_keywords, english):
       return '人\tPerson'
     place_keywords = ['Beijing', 'Indonesia', 'Macau', 'prefecture', 'place in',
-                      'town', 'prefecture', 'province']
-    place_keywords_zh = ['县', '庙', '镇', '湾']
+                      'town', 'prefecture']
+    place_keywords_zh = ['县', '庙', '镇']
     if (EntryAnalyzer.check_keywords(place_keywords, english) or
         EntryAnalyzer.check_keywords(place_keywords_zh, chinese)):
       return '地名\tPlace Name'
     if 'brand' in english:
-      return '产品\tProduct'
-    if 'state' in english:
-      return '州\tState'
+       return '产品\tProduct'
+    if 'River' in english:
+      return '水名\tRiver'
     if 'surname' in english:
       return '姓氏\tSurname'
+    if '寺' in chinese:
+       return '寺庙\tTemple'
     if '栎' in chinese:
       return '树\tTree'
+    if 'University' in english:
+      return '大学\tUniversity'
     return '\\N\t\\N'
 
   def guess_grammar(chinese: str, english: str) -> str:
     """Guess what the part of speech is"""
     if len(english) > 0 and english[-1:] == '!':
       return 'interjection'
-    if len(english) > 0 and english[0].isupper():
+    if len(english) > 0 and english[0].isupper() and 'idiom' not in english:
       return 'proper noun'
     if '(onom.)' in english:
       return 'onomatopoeia'
@@ -484,8 +614,8 @@ class EntryAnalyzer:
     arts_keywords = ['(art)', 'fine arts']
     if EntryAnalyzer.check_keywords(arts_keywords, english):
       return '艺术\tArt'
-    asia_keywords = ['Azerbaijan', 'Indonesia', 'Myanmar', 'Tajikistan',
-                     'Vietnam']
+    asia_keywords = ['Azerbaijan', 'Indonesia', 'Korean', 'Myanmar',
+                     'Tajikistan', 'Vietnam']
     if EntryAnalyzer.check_keywords(asia_keywords, english):
       return '亚洲\tAsia'
     astrol_keywords = ['astrology', 'divination']
@@ -514,17 +644,20 @@ class EntryAnalyzer:
     if (EntryAnalyzer.check_keywords(chem_keywords, english) or
         EntryAnalyzer.check_keywords(chem_keywords_zh, simplified)):
       return '化学\tChemistry'
-    china_keywords = ['Anhui', 'Beijing', 'Fujian', 'Gansu', 'Guangdong',
+    china_keywords = ['Anhui', 'Beijing', 'China', 'Chinese',
+                      'Cultural Revolution', 'Fujian', 'Gansu',
+                      'Guangdong',
                       'Guizhou', 'Guangxi',
                       'Hainan', 'Han dynasty',
                       'Hangzhou', 'Hebei', 'Heilongjiang', 'Henan',
                       'Hong Kong', 'Hubei', 'Hunan', 'Inner Mongolia',
                       'Jiangsu', 'Jiangxi', 'Jilin', 'Lhasa',
-                      'Liaoning', 'Macau', 'Ningxia', 'Qing dynasty',
-                      'Qinghai', 'Shandong', 'Shanxi',
+                      'Liaoning', 'Macau', 'Mao', 'Ningxia', 'PRC',
+                      'Qing',
+                      'Shandong', 'Shanxi',
                       'Shaanxi', 'Shanghai',
-                      'Sichuan', 'Tianjin', 'Xiamen', 'Xinjiang', 'Yunnan',
-                      'Zhejiang']
+                      'Sichuan', 'Tianjin', 'Tibet', 'Xiamen', 'Xinjiang',
+                      'Yunnan', 'Zhejiang']
     if EntryAnalyzer.check_keywords(china_keywords, english):
       return '中国\tChina'
     chin_med_keywords = ['acupuncture', '(Chinese medicine)', 'TCM']
@@ -537,11 +670,6 @@ class EntryAnalyzer:
     cloth_keywords_zh = ['裤', '衫', '襟', '裙', '鞋']
     if EntryAnalyzer.check_keywords(cloth_keywords_zh, simplified):
       return '服装\tClothing'
-    dance_keywords = ['dance']
-    dance_keywords_zh = ['舞']
-    if (EntryAnalyzer.check_keywords(dance_keywords, english) or
-        EntryAnalyzer.check_keywords(dance_keywords_zh, simplified)):
-      return '跳舞\tDancing'
     dialect_keywords = ['Cantonese', 'dialect', 'erhua variant', 'Shanghainese']
     if EntryAnalyzer.check_keywords(dialect_keywords, english):
       return '方言\tDialect'
@@ -552,19 +680,23 @@ class EntryAnalyzer:
                      '(electrical engineering)', 'semiconductor']
     if EntryAnalyzer.check_keywords(elec_keywords, english):
       return '电子工程\tElectronic Engineering'
-    eng_keywords = ['UK']
+    eng_keywords = ['Britain', 'British', 'tEngland', 'English', 'London', 'UK']
     if EntryAnalyzer.check_keywords(eng_keywords, english):
       return '英国\tEngland'
-    eu_keywords = ['German', 'Holland']
+    eu_keywords = ['Austrian', 'Czech', 'Dutch', 'France', 'French', 'German',
+                   'Holland',
+                   'Irish',
+                   'Italian',
+                   'Russian', 'Scottish',
+                   'Soviet', 'Spanish', 'Swedish']
     if EntryAnalyzer.check_keywords(eu_keywords, english):
       return '欧洲\tEurope'
     fin_keywords = ['accountancy', 'accounting', 'finance']
     if EntryAnalyzer.check_keywords(fin_keywords, english):
       return '财会\tFinance and Accounting'
-    food_keywords = ['cuisine', 'drink', 'food', 'milk', ' sauce']
-    food_keywords_zh = ['饼', '菜', '餐', '茶', '蛋糕', '葱', '果',  '酱', '酒',
-                        '咖啡',
-                        '辣椒', '巧克力', '蒜', '汤', '土豆']
+    food_keywords = ['cuisine', 'milk', ' sauce']
+    food_keywords_zh = ['饼', '餐', '茶', '蛋糕', '葱', '果',  '酱', '酒',
+                        '咖啡', '辣椒', '巧克力', '蒜', '汤', '土豆']
     food_keywords_zh_tw = ['麵']
     if (EntryAnalyzer.check_keywords(food_keywords, english) or
         EntryAnalyzer.check_keywords(food_keywords_zh, simplified) or
@@ -586,6 +718,9 @@ class EntryAnalyzer:
     if (EntryAnalyzer.check_keywords(gram_keywords, english) or
         EntryAnalyzer.check_keywords(gram_keywords_zh, simplified)):
       return '语法\tGrammar'
+    japan_keywords = ['Japan']
+    if EntryAnalyzer.check_keywords(japan_keywords, english):
+      return '日本\tJapan'
     law_keywords = ['criminal', 'judicial', '(law)']
     law_keywords_zh = ['法官', '律师']
     if (EntryAnalyzer.check_keywords(law_keywords, english) or
@@ -607,8 +742,7 @@ class EntryAnalyzer:
     if (EntryAnalyzer.check_keywords(med_keywords, english) or
         EntryAnalyzer.check_keywords(med_keywords_zh, simplified)):
       return '医学\tMedicine'
-    mil_keywords = ['bomb' , 'military', 'missile', 'warfare', 'warship',
-                    'weapon']
+    mil_keywords = ['bomb' , 'military', 'missile', 'warfare', 'warship']
     if EntryAnalyzer.check_keywords(mil_keywords, english):
       return '军事\tMilitary'
     music_keywords = ['guitar', 'music', '(opera)']
@@ -628,9 +762,6 @@ class EntryAnalyzer:
     pal_keywords = ['dinosaur', 'fossil', 'paleo', 'saurus']
     if EntryAnalyzer.check_keywords(pal_keywords, english):
       return '古生物学\tPaleontology'
-    phil_keywords = ['philosopher', 'philosophy']
-    if EntryAnalyzer.check_keywords(phil_keywords, english):
-      return '哲学\tPhilosophy'
     phon_keywords = ['phonetics']
     if EntryAnalyzer.check_keywords(phon_keywords, english):
       return '语音学\tPhonetics'
@@ -665,13 +796,13 @@ class EntryAnalyzer:
     stats_keywords = ['statistics']
     if EntryAnalyzer.check_keywords(stats_keywords, english):
       return '统计学\tStatistics'
-    us_keywords = ['state', 'Pennsylvania']
-    if EntryAnalyzer.check_keywords(stats_keywords, english):
+    us_keywords = ['America', 'state', 'Pennsylvania', 'US']
+    if EntryAnalyzer.check_keywords(us_keywords, english):
       return '美国\tUnited States'
     zoo_keywords = ['bird family', 'bird species', '(fish)', 'whale', 'shark',
                     'zoology']
-    zoo_keywords_zh = ['猫', '虫', '隼', '蛾', '蜂', '蟹', '鹭', '狸', '鹿', '鸟', 
-                       '驼', '鹉', '獾', '鲨', '熊', '猿']
+    zoo_keywords_zh = ['猫', '虫', '隼', '蛾', '蜂', '蟹', '鹭', '狸', '鸟', 
+                       '驼', '鹉', '獾', '鲨', '猿']
     if (EntryAnalyzer.check_keywords(zoo_keywords, english) or
         EntryAnalyzer.check_keywords(zoo_keywords_zh, simplified)):
       return '动物学\tZoology'
@@ -682,34 +813,46 @@ class EntryAnalyzer:
     english = entry.english
     if 'erhua variant' in english:
       return True
-    if traditional == '皇太後' or traditional == '入團':
+    ignore_words = ['皇太後', '入團', '麵的', '正太']
+    if EntryAnalyzer.check_keywords(ignore_words, traditional):
       return True
     else:
       return False
 
-  def is_modern_named_entity(entry: DictionaryEntry) -> bool:
+  def is_modern_named_entity(self, entry: DictionaryEntry) -> bool:
     """Guess whether the term is a modern named entity"""
     chinese = entry.simplified
     english = entry.english
+    if 'idiom' in entry.english:
+      return False
+    if (self.p_contains_16xx.match(english) or
+        self.p_contains_17xx.match(english) or
+        self.p_contains_18xx.match(english)):
+      return False
+    if self.p_contains_19xx.match(english):
+      return True
+    if self.p_contains_2xxx.match(english):
+      return True
     entity_keywords = ['actress', 'Administration', 'Afghan', 'Airlines',
                        'Albania', 'Algeria',
                        'Angola', 'America',
                        'anime', 'Anguilla',
                        'Australia', 'Austria', 'Bahamas', 'Bahrain',
-                       'basketball player', 'Belgian',
-                       'brand', 'Brazil', 'British', 'Business', 'Cameroon',
+                       'basketball player', 'Belgian', 'brand',
+                       'Brazil', 'British', 'Business', 'Cameroon',
                        'Canadian',
                        'Canada', 'Cape Verde', 'capital of', 'Caribbean',
                        'Carolina', 'Catholic', 'Chapel', 'character', 
                        'Chinese diplomat', 'Chinese politician',  'Club',
                        'Colorado', 'Colombia', 'Commission', 'Company',
                        'company', 'comic', 'Corporation',
-                       'corporation','Croatia',
+                       'corporation', 'Council', 'Croatia',
                        'Cuba', 'Cyprus',
                        'Czech', 'Dominica', 'Dutch', 'Egypt',
                        'England', 'English', 'Ethiopia', 'Europe',
                        'female singer',
-                       'film director', 'Finland', 'football player',
+                       'film director', 'Film Festival', 'Finland',
+                       'football player',
                        'France', 'French', 'Gambia', 'German', 'given name',
                        'Greece', 'Greek', 'Group', 'Guomindang',
                        'Harry Potter',
@@ -717,12 +860,12 @@ class EntryAnalyzer:
                        'Holland', 'hotel chain', 'Hungarian',
                        'Idaho',
                        'Iowa',
-                       'Iran', 'Iraq', 'Ireland', 'Israel',  'Italy', 'Japan',
+                       'Iran', 'Iraq', 'Ireland', 'Israel',  'Italy',
                        'Jewish', 'Journal', 'journalist and writer',
                        'Kansas', 'Kenya',
                        'Kiribati',
                        'Kyrgyzstan', 'male name',
-                       '(name)', 'Korea', 'Lebanon', 'Lesotho', 'London',
+                       '(name)', 'Lebanon', 'Lesotho', 'London',
                        'Manhattan',
                        'manufacturer', 'Mecca',
                        'Mexican', 'Ministry', 'Morocco', 'Mozambique', 'NBA',
@@ -739,15 +882,14 @@ class EntryAnalyzer:
                        'Saudi Arabia',
                        'Scotland', 'singer-songwriter', 'singer and actor',
                        'South Africa', 'Spain',
-                       'state',
                        'Sudan',  'supermarket', 'surname', 'Sweden', 'Swiss',
-                       'Switzerland', 'Taiwanese politician',
+                       'Switzerland', 'Syria', 'Taiwanese politician',
                        'Tanzania', 'Tokyo', 'Turkey', 'United States',
                        '(U.S.)', 'US', 'UK', 'TV',
                        'Ukraine', 'University', 'Uzbekistan', 'Venice',
                        'video game',
                        'website', 'Wyoming', 'Zambia', 'Zimbabwe']
-    entity_keywords_zh = ['·', '，']
+    entity_keywords_zh = ['·']
     if (EntryAnalyzer.check_keywords(entity_keywords, english) or
         EntryAnalyzer.check_keywords(entity_keywords_zh, chinese)):
       return True
@@ -769,7 +911,7 @@ def compare_cc_cedict_cnotes(in_fname: str, out_fname: str):
   cedict = open_cc_cedict(in_fname)
   cnotes_dict = cndict.open_dictionary()
   sample = 0
-  luid = 151811
+  luid = 164613
   with open(out_fname, 'w') as out_file:
     for trad, entry in cedict.items():
       if trad not in cnotes_dict:
@@ -777,12 +919,13 @@ def compare_cc_cedict_cnotes(in_fname: str, out_fname: str):
         if (sample < 100
             and not entry_analysis.contains_alphanum
             and len(trad) > 1
-            and not entry_analysis.contains_notes
+            #and not entry_analysis.contains_notes
             and not len(entry.senses) > 1
             and not entry_analysis.refers_to_variant
             and not entry_analysis.is_modern_named_entity
             and not entry_analysis.ignore
-            and not entry_analysis.contains_punctuation):
+            #and not entry_analysis.contains_punctuation
+          ):
           grammar = entry_analysis.grammar
           traditional = trad
           if entry.simplified == trad:
