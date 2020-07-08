@@ -62,6 +62,16 @@ INFO:root:Chunk: 東家人死。西家人助哀。
 INFO:root:Segments: ['東家', '人', '死', '。', '西家', '人', '助', '哀', '。']
 ```
 
+### Word Similarity
+
+To run the word similarity tool
+
+```shell
+python -m chinesenotes.similarity  --word TARGET_WORD
+```
+
+Substitute the value of TARGET_WORD for your search.
+
 ### Converting between simplified and traditional
 
 To convert traditional to simplified

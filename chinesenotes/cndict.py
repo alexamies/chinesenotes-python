@@ -143,10 +143,10 @@ def _load_dictionary(dict_file: TextIO,
           try:
             headword_id = int(fields[15])
           except ValueError as e:
-            log.error('Error parsing headword_id for ', simplified, ': ', 
+            logging.error('Error parsing headword_id for ', simplified, ': ', 
                       headword_id)
         else:
-          log.error(f'Invalid headword_id for ', simplified, ': ', headword_id)
+          logging.error(f'Invalid headword_id for ', simplified, ': ', headword_id)
       sense = WordSense(simplified, traditional, pinyin, english)
       if grammar:
         sense.grammar = grammar
