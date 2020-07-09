@@ -23,10 +23,79 @@ Methods for computing similarity of strings of Chinese characters
 import argparse
 import logging
 import os
-from typing import List, Mapping
+from typing import List, Mapping, Set
 
 from chinesenotes import cndict
 from chinesenotes.cndict_types import DictionaryEntry
+
+MIN_LEN = 2
+
+
+def find_similar(w: str,
+    wdict: Mapping[str, DictionaryEntry])->List[str]:
+  """Finds the most similar words in the dictionary based on multiple measures"""
+  most_similar = find_similar_hamming(w, wdict)
+  most_similar = most_similar | find_similar_same_chars(w, wdict)
+  most_similar = most_similar | find_hamming_pinyin(w, wdict)
+  return list(most_similar)
+
+
+def find_hamming_pinyin(w: str,
+    wdict: Mapping[str, DictionaryEntry])->Set[str]:
+  """Finds the most similar words based on pinyin Hamming distance"""
+  d_min = 100
+  most_similar = set()
+  w_entry = wdict[w]
+  if not w_entry: # TO DO: compute the pinyin of a term not in the dictionary
+    return most_similar
+  pinyin = w_entry.pinyin
+  simplified = w_entry.simplified
+  for key in wdict:
+    entry = wdict[key]
+    s = entry.simplified
+    if key == w or simplified == s: # Same word, skip
+      continue
+    d = hamming_distance(pinyin, entry.pinyin)
+    if d < d_min and len(key) >= MIN_LEN: # new min
+      d_min = d
+      most_similar = {key}
+    elif d == d_min: # tie
+      most_similar.add(key)
+  return most_similar
+
+
+def find_similar_hamming(w: str,
+    wdict: Mapping[str, DictionaryEntry])->Set[str]:
+  """Finds the most similar words based on Hamming distance"""
+  d_min = 100
+  most_similar = set()
+  for key in wdict:
+    if key == w: # Same word, skip
+      continue
+    d = hamming_distance(w, key)
+    if d < d_min and len(key) >= MIN_LEN: # new min
+      d_min = d
+      most_similar = {key}
+    elif d == d_min: # tie
+      most_similar.add(key)
+  return most_similar
+
+
+def find_similar_same_chars(w: str,
+    wdict: Mapping[str, DictionaryEntry])->Set[str]:
+  """Finds the most similar words based on number of same characters"""
+  sim_max = 0
+  most_similar = set()
+  for key in wdict:
+    if key == w: # Same word, skip
+      continue
+    sim = num_same_chars(w, key)
+    if sim > sim_max and len(key) >= MIN_LEN: # new max
+      sim_max = sim
+      most_similar = {key}
+    elif sim == sim_max: # tie
+      most_similar.add(key)
+  return most_similar
 
 
 def hamming_distance(w1: str, w2: str)->int:
@@ -34,7 +103,7 @@ def hamming_distance(w1: str, w2: str)->int:
   d = 0
   for i in range(len(w1)):
     if i >= len(w2):
-      return d
+      return d + len(w1) - len(w2)
     if w1[i] != w2[i]:
       d += 1
   return d
@@ -47,46 +116,6 @@ def num_same_chars(w1: str, w2: str)->int:
     if ch in w2:
       sim += 1
   return sim
-
-
-def find_similar(w: str,
-    wdict: Mapping[str, DictionaryEntry])->List[str]:
-  """Finds the most similar words in the dictionary based on multiple measures"""
-  most_similar = find_similar_hamming(w, wdict)
-  most_similar_chars = find_similar_same_chars(w, wdict)
-  most_similar.extend(most_similar_chars)
-  return most_similar
-
-
-def find_similar_hamming(w: str,
-    wdict: Mapping[str, DictionaryEntry])->List[str]:
-  """Finds the most similar words based on Hamming distance"""
-  d_min = 100
-  most_similar = []
-  for key in wdict:
-    d = hamming_distance(w, key)
-    if d < d_min: # new min
-      d_min = d
-      most_similar.append(key)
-    elif d == d_min: # tie
-      most_similar = [key]
-  return most_similar
-
-
-def find_similar_same_chars(w: str,
-    wdict: Mapping[str, DictionaryEntry])->List[str]:
-  """Finds the most similar words based on number of same characters"""
-  sim_max = 0
-  most_similar = []
-  for key in wdict:
-    sim = num_same_chars(w, key)
-    if sim > sim_max: # new max
-      sim_max = sim
-      most_similar.append(key)
-    elif sim == sim_max: # tie
-      most_similar = [key]
-  logging.info(f'find_similar_same_chars, sim_max: {sim_max}, most_similar: {most_similar}')
-  return most_similar
 
 
 def main():
