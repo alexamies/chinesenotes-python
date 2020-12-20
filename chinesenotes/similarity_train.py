@@ -44,8 +44,10 @@ def Train(infile, outfile):
   clf = clf.fit(X, Y)
   dot_data = tree.export_graphviz(clf, filled = True, rounded = True)
   graph = graphviz.Source(dot_data) 
-  feature_names = ['Unigram count', 'Hamming distance']
+  feature_names = ['Unigram count / len', 'Hamming distance / len']
   class_names = ['Relevant', 'Not relevant']
+  r = tree.export_text(clf, feature_names=feature_names)
+  print(r)
   tree.plot_tree(clf,
                  feature_names=feature_names,
                  class_names=class_names,
@@ -64,8 +66,9 @@ def load_training_data(infile):
       if reader.line_num == 1:  # Skip header row
         continue
       if len(row) > 8:
-        unigram_count = int(row[5])
-        hamming = float(row[6])
+        query = row[0]
+        unigram_count = int(row[5])  / (len(query) * 1.0)
+        hamming = float(row[6])  / (len(query) * 1.0)
         relevance = int(row[8])
         x = [unigram_count, hamming]
         X.append(x)

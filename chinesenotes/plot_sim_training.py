@@ -45,19 +45,19 @@ def PlotResults(infile, outfile):
     if y[i] == 0:
       c = 'r'
     colors.append(c)
-    new_xval = x2[i] + random.normal(0.0, 0.05)
+    new_xval = x1[i] + random.normal(0.0, 0.01)
     x_fn_jitter.append(new_xval)
-    new_yval = x1[i] + random.normal(0.0, 0.05)
+    new_yval = x2[i] + random.normal(0.0, 0.01)
     y_fn_jitter.append(new_yval)
   #plt.figure(num=None, figsize=(4, 6))
   #plt.subplot(121)
   plt.scatter(x_fn_jitter, y_fn_jitter, c=colors, s=25, marker='^')
-  xd = [-0.1, 5.5, 5.5, 7.1]
-  yd = [1.5, 1.5, 2.5, 2.5]
+  xd = [-0.1, 0.59, 0.59]
+  yd = [0.37, 0.37, 1.0]
   plt.plot(xd, yd, color='blue')
   plt.title('Phrase similarity relevance')
-  plt.xlabel('Unigram count')
-  plt.ylabel('Hamming distance')
+  plt.xlabel('Hamming distance / len')
+  plt.ylabel('Unigram count / len')
   # plt.xticks([0, 1], ('False', 'True')) 
   # plt.ylim([-3, 20])
   green_data = mpatches.Patch(color='green', label='Relevant')
@@ -79,11 +79,12 @@ def load_training_data(infile):
       if reader.line_num == 1:  # Skip header row
         continue
       if len(row) > 8:
-        unigram_count = int(row[5])
-        hamming = float(row[6])
+        query = row[0]
+        unigram_count = int(row[5]) / (len(query) * 1.0)
+        hamming = float(row[6]) / (len(query) * 1.0)
         relevance = int(row[8])
-        x1.append(unigram_count)
-        x2.append(hamming)
+        x1.append(hamming)
+        x2.append(unigram_count)
         y.append(relevance)
       else:
         log(f'Could not understand row {row}')

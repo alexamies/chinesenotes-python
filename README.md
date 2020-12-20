@@ -619,7 +619,17 @@ Train a decision tree classifier:
 
 ```shell
 python -m chinesenotes.similarity_train
+# output
+Training decision tree from data/phrase_similarity_classified.csv, output to drawings/phrase_similarity_tree.png
+|--- Unigram count / len <= 0.37
+|   |--- class: 0
+|--- Unigram count / len >  0.37
+|   |--- Hamming distance / len <= 0.59
+|   |   |--- class: 1
+|   |--- Hamming distance / len >  0.59
+|   |   |--- class: 0
 ```
+
 
 Plot the results
 
