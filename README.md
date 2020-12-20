@@ -595,7 +595,41 @@ Error: 下放 (false positive)
 
 Note: total 199 segments, 2 errors (1 false negative, 1 false positive)
 
+## Log parsing
+
+Install the prerequisite libraries in the virtual env:
+
+```shell
+python -m pip install -U matplotlib
+python -m pip install -U graphviz
+python -m pip install -U sklearn
+```
+
+To use sim_log_parser for parsing chinesenotes-go web app logs including
+similarity results.
+
+```shell
+python -m chinesenotes.sim_log_parser
+```
+
+Score the results for relevance by adding an addiitonal column and save in file
+`phrase_similarity_classified.csv`. 
+
+Train a decision tree classifier:
+
+```shell
+python -m chinesenotes.similarity_train
+```
+
+Plot the results
+
+```shell
+python -m chinesenotes.plot_sim_training
+```
+
+
 ## Appendix B: Calculation of Character Bigram Correlation
+
 ### Pointwise Mutual Information
 The probability p(a, b) can be computed as 
 

@@ -472,13 +472,13 @@ class EntryAnalyzer:
        return '音乐\tMusic'
     place_keywords = ['Archipelago', 'banner', 'Bay ', 'capital ', ' city',
                       'city ', 'City', 'county',
-                      'County',
+                      'County', 'Desert',
                       'Hotel', 'Indonesia', 'Island', 'Kurdistan', 'Lake',
                       'Macau', 'Manhattan', 'Mongolia', 'Morocco',
                       'mountain range',
                       'mountains', 'Peninsula',
                       'place in',
-                      'place name', 'republic',
+                      'place name', 'region', 'republic',
                       'River', 'Myanmar',
                       'prefecture', 'province', 'town', 'Tower', 'UK',
                       'US state', ' valley', 'Vietnam']
@@ -495,7 +495,9 @@ class EntryAnalyzer:
       return '谚语\tProverb'
     if 'physicist' in english:
       return '机科学\tScience'
-    sport_keywords = ['Athletics', 'basketball', 'Games', 'Olympic medalist']
+    sport_keywords = ['Athletics', 'basketball', 'Chinese athlete', 'Games',
+                      'Olympic medalist',
+                      'soccer player', 'tennis player']
     if EntryAnalyzer.check_keywords(sport_keywords, english):
       return '体育\tSport'
     return '现代汉语\tModern Chinese'
@@ -638,7 +640,8 @@ class EntryAnalyzer:
     english = entry.english
     simplified = entry.simplified
     traditional = entry.traditional
-    africa_keywords = ['Africa', 'Botswana', 'Congo', 'Morocco', 'Zimbabwe']
+    africa_keywords = ['Africa', 'Botswana', 'Congo', 'Ethiopia', 'Morocco',
+                       'Zimbabwe']
     if EntryAnalyzer.check_keywords(africa_keywords, english):
       return '非洲\tAfrica'
     ag_keywords = ['agriculture', 'farming']
@@ -851,11 +854,12 @@ class EntryAnalyzer:
     sa_keywords = ['Argentina', 'Brazil', 'Venezuela']
     if EntryAnalyzer.check_keywords(sa_keywords, english):
       return '南美\tSouth America'
-    us_keywords = ['America', 'Boston', 'California', 'Hawaii', 'Iowa',
+    us_keywords = ['America', 'Boston', 'California', 'Colorado', 'Hawaii',
+                   'Iowa',
                    'Manhattan',
                    'Massachusetts',
                    'Nevada', 'New York', 'Pennsylvania', 'Rhode Island',
-                   'US']
+                   'Texas' , 'United States', 'US']
     if EntryAnalyzer.check_keywords(us_keywords, english):
       return '美国\tUnited States'
     zoo_keywords = ['bird family', 'bird species', '(fish)', 'whale', 'shark',
@@ -968,7 +972,7 @@ def compare_cc_cedict_cnotes(in_fname: str, out_fname: str):
   cedict = open_cc_cedict(in_fname)
   cnotes_dict = cndict.open_dictionary()
   sample = 0
-  luid = 6004408
+  luid = 6005842
   with open(out_fname, 'w') as out_file:
     for trad, entry in cedict.items():
       if trad not in cnotes_dict:
@@ -977,10 +981,10 @@ def compare_cc_cedict_cnotes(in_fname: str, out_fname: str):
             and not entry_analysis.contains_alphanum
             and len(trad) > 1
             #and not entry_analysis.contains_notes
-            and not len(entry.senses) > 1
+            #and not len(entry.senses) > 1
             and not entry_analysis.refers_to_variant
             #and not entry_analysis.is_modern_named_entity
-            and not entry_analysis.ignore
+            #and not entry_analysis.ignore
             #and not entry_analysis.contains_punctuation
           ):
           grammar = entry_analysis.grammar
@@ -1100,7 +1104,6 @@ def main():
   logging.basicConfig(level=logging.INFO)
   cn_home = 'https://github.com/alexamies/chinesenotes.com'
   fname = f'{cn_home}/blob/master/data/words.txt?raw=true'
-  wdict = {}
   if 'CNREADER_HOME' in os.environ:
     cn_home = os.environ['CNREADER_HOME']
     fname = f'{cn_home}/data/words.txt'

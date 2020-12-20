@@ -17,7 +17,7 @@
 #
 
 """
-Plot the result of processing the annotated corpus file
+Plot the results of processing the annotated corpus file
 """
 
 import argparse
