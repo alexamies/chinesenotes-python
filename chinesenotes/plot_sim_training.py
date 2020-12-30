@@ -20,6 +20,7 @@
 Plot the similarity training results with unigram count and Hamming distance
 """
 
+import argparse
 import csv
 import logging
 import matplotlib.patches as mpatches
@@ -27,7 +28,13 @@ import matplotlib.pyplot as plt
 from numpy import random 
 
 
-def PlotResults(infile, outfile):
+INFILE_DEF = 'data/phrase_similarity_training.csv'
+OUTFILE_DEF = 'drawings/phrase_similarity_plot.png'
+UNIGRAM_DEF = 0.46
+HAMMING_DEF = 0.63
+
+def PlotResults(infile: str, outfile: str, unigram_lim: float,
+                hamming_lim: float):
   """Plots data
 
   Args:
@@ -52,14 +59,15 @@ def PlotResults(infile, outfile):
   #plt.figure(num=None, figsize=(4, 6))
   #plt.subplot(121)
   plt.scatter(x_fn_jitter, y_fn_jitter, c=colors, s=25, marker='^')
-  xd = [-0.1, 0.59, 0.59]
-  yd = [0.37, 0.37, 1.0]
+  xd = [-0.1, hamming_lim, hamming_lim]
+  yd = [unigram_lim, unigram_lim, 1.0]
   plt.plot(xd, yd, color='blue')
   plt.title('Phrase similarity relevance')
   plt.xlabel('Hamming distance / len')
   plt.ylabel('Unigram count / len')
   # plt.xticks([0, 1], ('False', 'True')) 
-  # plt.ylim([-3, 20])
+  plt.xlim([0.0, 1.0])
+  plt.ylim([0.0, 1.0])
   green_data = mpatches.Patch(color='green', label='Relevant')
   red_data = mpatches.Patch(color='red', label='Not relevant')
   blue_data = mpatches.Patch(color='blue', label='Decision boundary')
@@ -93,10 +101,28 @@ def load_training_data(infile):
 
 def main():
   logging.basicConfig(level=logging.INFO)
-  infile = 'data/phrase_similarity_classified.csv'
-  outfile = 'drawings/phrase_similarity_classified.png'
-  logging.info(f'Plotting results from {infile} to {outfile}')
-  PlotResults(infile, outfile)
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--infile',
+                      dest='infile',
+                      default=INFILE_DEF, 
+                      help='File name to read infile from')
+  parser.add_argument('--outfile',
+                      dest='outfile',
+                      default=OUTFILE_DEF, 
+                      help='File name to save plot to')
+  parser.add_argument('--unigram_lim',
+                      dest='unigram_lim',
+                      default=UNIGRAM_DEF,
+                      type=float,
+                      help='Unigram frequency decision boundary')
+  parser.add_argument('--hamming_lim',
+                      dest='hamming_lim',
+                      default=HAMMING_DEF, 
+                      type=float,
+                      help='Hamming distance decision boundary')
+  args = parser.parse_args()
+  logging.info(f'Plotting results from {args.infile} to {args.outfile}')
+  PlotResults(args.infile, args.outfile, args.unigram_lim, args.hamming_lim)
 
 
 # Entry point from a script

@@ -24,6 +24,7 @@ directory 'logs'. They are generated with GCP Cloud Logging, exported to a
 Log Sink in a GCS bucket and downloaded to the local drive.
 """
 
+import argparse
 import _csv
 import csv
 import json
@@ -33,19 +34,21 @@ from os import path
 from pathlib import Path
 
 LOG_PATH = 'logs'
+CSV_OUTPUT = 'data/sim_training.csv'
 
 
-def parse_logs():
+def parse_logs(outfile: str):
   """Parses the logs"""
   logging.info('parse_logs enter')
   p = Path.cwd() / LOG_PATH
   fnames = p.glob('*.json')
-  with open('data/sim_training.csv', 'w', newline='') as outF:
+  with open(outfile, 'w', newline='') as outF:
     csvOut = csv.writer(outF)
     csvOut.writerow(['Query', 'Rank', 'Term', 'Pinyin Match', 'In Notes',
-                    'Unigram Count', 'Hamming', 'Is Substring'])
+                    'Unigram Count', 'Hamming', 'Is Substring', 'Is Relevant'])
     for fname in fnames:
       process_log(csvOut, fname)
+  logging.info(f'CSV output written to {outfile}')
 
 
 def process_log(csvOut: _csv.writer, fname: str):
@@ -59,7 +62,7 @@ def process_log(csvOut: _csv.writer, fname: str):
     if len(parts) > 1:
       data = parts[-1]
       values = data.split(',')
-      if len(values) > 7:
+      if len(values) > 8:
         query = values[0].strip()
         rank = int(values[1]) + 1
         term = values[2].strip()
@@ -67,16 +70,22 @@ def process_log(csvOut: _csv.writer, fname: str):
         inNotes = int(values[4])
         uniCount = int(values[5])
         hamming = int(values[6])
-        isSubstring = int(values[7])
+        is_substring = int(values[7])
+        is_relevant = int(values[7])
         csvOut.writerow([query, rank, term, pMatch, inNotes, uniCount, hamming,
-                        isSubstring])
+                        is_substring, is_relevant])
 
 
 def main():
   """Command line entry point"""
   logging.basicConfig(level=logging.INFO)
-  logging.info('Parsing logs')
-  parse_logs()
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--outfile',
+                      dest='outfile',
+                      default=CSV_OUTPUT, 
+                      help='File name to write output to')
+  args = parser.parse_args()
+  parse_logs(args.outfile)
 
 
 # Entry point from a script

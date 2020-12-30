@@ -22,12 +22,17 @@ Trains a decision tree classifier for phrase similarity.
 Reads the input file and trains the classifier.
 """
 
+import argparse
 import csv
 import logging
 import graphviz
 import matplotlib.pyplot as plt
 from sklearn import tree
 from sklearn.tree import export_graphviz
+
+
+INFILE_DEF = 'data/phrase_similarity_training.csv'
+OUTFILE_DEF = 'drawings/phrase_similarity_graph.png'
 
 def Train(infile, outfile):
   """Train the classifier
@@ -77,10 +82,18 @@ def load_training_data(infile):
 
 def main():
   logging.basicConfig(level=logging.INFO)
-  infile = 'data/phrase_similarity_classified.csv'
-  outfile = 'drawings/phrase_similarity_tree.png'
-  logging.info(f'Training decision tree from {infile}, output to {outfile}')
-  Train(infile, outfile)
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--infile',
+                      dest='infile',
+                      default=INFILE_DEF, 
+                      help='File name to read infile from')
+  parser.add_argument('--outfile',
+                      dest='outfile',
+                      default=OUTFILE_DEF, 
+                      help='File name to write output to')
+  args = parser.parse_args()
+  logging.info(f'Training decision tree from {args.infile}, output to {args.outfile}')
+  Train(args.infile, args.outfile)
 
 
 # Entry point from a script

@@ -609,7 +609,8 @@ To use sim_log_parser for parsing chinesenotes-go web app logs including
 similarity results.
 
 ```shell
-python -m chinesenotes.sim_log_parser
+python -m chinesenotes.sim_log_parser \
+  --outfile=data/phrase_similarity_training_logs.csv
 ```
 
 Score the results for relevance by adding an addiitonal column and save in file
@@ -618,15 +619,20 @@ Score the results for relevance by adding an addiitonal column and save in file
 Train a decision tree classifier:
 
 ```shell
-python -m chinesenotes.similarity_train
+python -m chinesenotes.similarity_train \
+  --infile=data/phrase_similarity_training.csv \
+  --outfile=drawings/phrase_similarity_graph.png
+
 # output
-Training decision tree from data/phrase_similarity_classified.csv, output to drawings/phrase_similarity_tree.png
-|--- Unigram count / len <= 0.37
-|   |--- class: 0
-|--- Unigram count / len >  0.37
-|   |--- Hamming distance / len <= 0.59
+|--- Hamming distance / len <= 0.63
+|   |--- Unigram count / len <= 0.46
 |   |   |--- class: 1
-|   |--- Hamming distance / len >  0.59
+|   |--- Unigram count / len >  0.46
+|   |   |--- class: 0
+|--- Hamming distance / len >  0.63
+|   |--- Hamming distance / len <= 0.73
+|   |   |--- class: 0
+|   |--- Hamming distance / len >  0.73
 |   |   |--- class: 0
 ```
 
@@ -634,7 +640,11 @@ Training decision tree from data/phrase_similarity_classified.csv, output to dra
 Plot the results
 
 ```shell
-python -m chinesenotes.plot_sim_training
+python -m chinesenotes.plot_sim_training \
+  --infile=data/phrase_similarity_training.csv \
+  --outfile=drawings/phrase_similarity_plot.png \
+  --unigram_lim=0.46 \
+  --hamming_lim=0.63
 ```
 
 
