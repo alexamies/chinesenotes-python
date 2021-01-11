@@ -626,22 +626,22 @@ python -m chinesenotes.similarity_train \
 # output
               precision    recall  f1-score   support
 
-           0       0.84      0.90      0.87       111
-           1       0.52      0.39      0.44        31
+           0       0.83      0.95      0.88       130
+           1       0.65      0.34      0.45        38
 
-    accuracy                           0.79       142
-   macro avg       0.68      0.64      0.66       142
-weighted avg       0.77      0.79      0.78       142
+    accuracy                           0.81       168
+   macro avg       0.74      0.64      0.67       168
+weighted avg       0.79      0.81      0.79       168
 
-|--- Unigram count / len <= 0.41
-|   |--- Unigram count / len <= 0.27
+|--- Unigram count <= 2.50
+|   |--- Hamming distance <= 2.50
 |   |   |--- class: 0
-|   |--- Unigram count / len >  0.27
+|   |--- Hamming distance >  2.50
 |   |   |--- class: 0
-|--- Unigram count / len >  0.41
-|   |--- Hamming distance / len <= 0.62
+|--- Unigram count >  2.50
+|   |--- Hamming distance <= 9.50
 |   |   |--- class: 1
-|   |--- Hamming distance / len >  0.62
+|   |--- Hamming distance >  9.50
 |   |   |--- class: 0
 ```
 
@@ -650,9 +650,12 @@ Plot the results
 ```shell
 python -m chinesenotes.plot_sim_training \
   --infile=data/training_balanced.csv \
-  --outfile=drawings/phrase_similarity_plot.png \
-  --unigram_lim=0.41 \
-  --hamming_lim=0.62
+  --outfile2=drawings/phrase_similarity_plot.png \
+  --unigram_lim2=0.41 \
+  --hamming_lim2=0.62 \
+  --outfile3=drawings/phrase_similarity_plot3.png \
+  --unigram_lim3=2.5 \
+  --hamming_lim3=4.0
 ```
 
 ## Appendix B: Calculation of Character Bigram Correlation
