@@ -28,6 +28,7 @@ import logging
 import graphviz
 import matplotlib.pyplot as plt
 from sklearn import tree
+from sklearn.metrics import classification_report
 from sklearn.tree import export_graphviz
 
 
@@ -47,6 +48,10 @@ def Train(infile, outfile):
                                     criterion='gini',
                                     min_samples_split=3)
   clf = clf.fit(X, Y)
+  score = clf.score(X, Y)
+  logging.info(f'Classifier score: {score}\n')
+  y_pred = clf.predict(X)
+  print(classification_report(Y, y_pred))
   dot_data = tree.export_graphviz(clf, filled = True, rounded = True)
   graph = graphviz.Source(dot_data) 
   feature_names = ['Unigram count / len', 'Hamming distance / len']

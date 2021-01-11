@@ -613,40 +613,47 @@ python -m chinesenotes.sim_log_parser \
   --outfile=data/phrase_similarity_training_logs.csv
 ```
 
-Score the results for relevance by adding an addiitonal column and save in file
-`phrase_similarity_classified.csv`. 
+Score the results for relevance in a spreadsheet and export to the CSV file
+`data/training_balanced.csv`. 
 
 Train a decision tree classifier:
 
 ```shell
 python -m chinesenotes.similarity_train \
-  --infile=data/phrase_similarity_training.csv \
+  --infile=data/training_balanced.csv \
   --outfile=drawings/phrase_similarity_graph.png
 
 # output
-|--- Hamming distance / len <= 0.63
-|   |--- Unigram count / len <= 0.46
+              precision    recall  f1-score   support
+
+           0       0.84      0.90      0.87       111
+           1       0.52      0.39      0.44        31
+
+    accuracy                           0.79       142
+   macro avg       0.68      0.64      0.66       142
+weighted avg       0.77      0.79      0.78       142
+
+|--- Unigram count / len <= 0.41
+|   |--- Unigram count / len <= 0.27
+|   |   |--- class: 0
+|   |--- Unigram count / len >  0.27
+|   |   |--- class: 0
+|--- Unigram count / len >  0.41
+|   |--- Hamming distance / len <= 0.62
 |   |   |--- class: 1
-|   |--- Unigram count / len >  0.46
-|   |   |--- class: 0
-|--- Hamming distance / len >  0.63
-|   |--- Hamming distance / len <= 0.73
-|   |   |--- class: 0
-|   |--- Hamming distance / len >  0.73
+|   |--- Hamming distance / len >  0.62
 |   |   |--- class: 0
 ```
-
 
 Plot the results
 
 ```shell
 python -m chinesenotes.plot_sim_training \
-  --infile=data/phrase_similarity_training.csv \
+  --infile=data/training_balanced.csv \
   --outfile=drawings/phrase_similarity_plot.png \
-  --unigram_lim=0.46 \
-  --hamming_lim=0.63
+  --unigram_lim=0.41 \
+  --hamming_lim=0.62
 ```
-
 
 ## Appendix B: Calculation of Character Bigram Correlation
 

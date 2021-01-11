@@ -61,7 +61,16 @@ def PlotResults(infile: str, outfile: str, unigram_lim: float,
   plt.scatter(x_fn_jitter, y_fn_jitter, c=colors, s=25, marker='^')
   xd = [-0.1, hamming_lim, hamming_lim]
   yd = [unigram_lim, unigram_lim, 1.0]
-  plt.plot(xd, yd, color='blue')
+  plt.plot(xd, yd, color='blue',linewidth=1.0)
+  plt.fill_between(x=[0, hamming_lim],
+                   y1=[unigram_lim, unigram_lim],
+                   y2=[1, 1],
+                   facecolor='lightgreen', alpha=0.2)
+  plt.fill_between(x=[0, hamming_lim, hamming_lim, 1],
+                   y1=[0, 0, 0, 0],
+                   y2=[unigram_lim, unigram_lim, 1, 1],
+                   facecolor='lightcoral',
+                   alpha=0.2)
   plt.title('Phrase similarity relevance')
   plt.xlabel('Hamming distance / len')
   plt.ylabel('Unigram count / len')
@@ -81,6 +90,8 @@ def load_training_data(infile):
   x1 = []
   x2 = []
   y = []
+  num_rel = 0
+  not_rel = 0
   with open(infile, 'r') as f:
     reader = csv.reader(f)
     for row in reader:
@@ -91,11 +102,14 @@ def load_training_data(infile):
         unigram_count = int(row[5]) / (len(query) * 1.0)
         hamming = float(row[6]) / (len(query) * 1.0)
         relevance = int(row[8])
+        num_rel += relevance
+        not_rel += 1 - relevance
         x1.append(hamming)
         x2.append(unigram_count)
         y.append(relevance)
       else:
-        log(f'Could not understand row {row}')
+        logging.info(f'Could not understand row {row}')
+  logging.info(f'Points: {len(y)}, relevant: {num_rel}, not relevant: {not_rel}')
   return (x1, x2, y)
 
 
