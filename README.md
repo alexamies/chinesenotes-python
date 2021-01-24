@@ -602,13 +602,19 @@ Note: total 199 segments, 2 errors (1 false negative, 1 false positive)
 
 ## Training for Phrase similarity
 
+### Setup
+
 Install the prerequisite libraries in the virtual env:
 
 ```shell
 python -m pip install -U matplotlib
 python -m pip install -U graphviz
 python -m pip install -U sklearn
+python -m pip install -U tensorflow
+python -m pip install -U pandas
 ```
+
+### Training Data
 
 To use sim_log_parser for parsing chinesenotes-go web app logs including
 similarity results.
@@ -628,14 +634,17 @@ python -m chinesenotes.sim_log_parser \
 Score the results for relevance in a spreadsheet and export to the CSV file
 `data/training_balanced.csv`. 
 
-Train a decision tree classifier:
+### Decision Tree Classifier
+
+Train and validate a decision tree classifier:
 
 ```shell
 python -m chinesenotes.similarity_train \
   --infile=data/training_balanced.csv \
-  --outfile=drawings/phrase_similarity_graph.png
+  --outfile=drawings/phrase_similarity_graph.png \
+  --valfile=data/validation_biyan.csv
 
-# output
+Training results
               precision    recall  f1-score   support
 
            0       0.84      0.94      0.89       170
@@ -655,6 +664,16 @@ weighted avg       0.79      0.81      0.79       218
 |   |   |--- class: 1
 |   |--- Hamming distance >  9.50
 |   |   |--- class: 0
+
+Validation results
+              precision    recall  f1-score   support
+
+           0       0.88      0.94      0.91        49
+           1       0.62      0.45      0.53        11
+
+    accuracy                           0.85        60
+   macro avg       0.75      0.70      0.72        60
+weighted avg       0.84      0.85      0.84        60
 ```
 
 
@@ -714,6 +733,20 @@ python -m chinesenotes.plot_sim_training \
   --outfile3=drawings/phrase_similarity_combined_plot.png \
   --unigram_lim3=2.5 \
   --hamming_lim3=9.5
+```
+
+### Neutral Net Classifier with Structured Data
+
+Train the neutral net with the command
+
+```shell
+python -m chinesenotes.similarity_tf \
+  --trainfile=data/training_combined.csv \
+  --valfile=data/validation_biyan.csv  
+
+# output
+Epoch 10/10
+48/48 [==============================] - 0s 835us/step - loss: 0.5144 - accuracy: 0.7416 - val_loss: 0.4352 - val_accuracy: 0.8333
 ```
 
 

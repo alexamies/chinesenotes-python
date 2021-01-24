@@ -32,11 +32,11 @@ from sklearn.metrics import classification_report
 from sklearn.tree import export_graphviz
 
 
-INFILE_DEF = 'data/phrase_similarity_training.csv'
+INFILE_DEF = 'data/phrase_similarity_combined.csv'
 OUTFILE_DEF = 'drawings/phrase_similarity_graph.png'
 
 
-def run(infile, outfile):
+def run(infile, outfile, val_file):
   """Load training data and train the classifier
 
   Args:
@@ -48,7 +48,10 @@ def run(infile, outfile):
   train(x, y, feature_names, outfile)
   x, y = load_training3(infile)
   feature_names = ['Unigram count', 'Hamming distance', 'Query length']
-  train(x, y, feature_names, outfile)
+  clf = train(x, y, feature_names, outfile)
+  if len(val_file) > 0:
+    x, y = load_training3(val_file)
+    validate(clf, x, y, feature_names)
 
 
 def train(x, y, feature_names, outfile):
@@ -59,6 +62,8 @@ def train(x, y, feature_names, outfile):
     y: list of target values
     feature_names: Names of feature variables
     outfile: file name to write graphviz export to
+  Returns:
+    the trained classifier
   """
   clf = tree.DecisionTreeClassifier(random_state=0,
                                     max_depth=2,
@@ -68,6 +73,7 @@ def train(x, y, feature_names, outfile):
   score = clf.score(x, y)
   logging.info(f'Classifier score: {score}\n')
   y_pred = clf.predict(x)
+  print("Training results")
   print(classification_report(y, y_pred))
   dot_data = tree.export_graphviz(clf, filled = True, rounded = True)
   graph = graphviz.Source(dot_data) 
@@ -81,6 +87,20 @@ def train(x, y, feature_names, outfile):
                  impurity=False)
   #plt.show()
   plt.savefig(outfile, dpi=160)
+  return clf
+
+
+def validate(clf, x, y, feature_names):
+  """Validate the classifier
+
+  Args:
+    x: list of values for feature variables
+    y: list of target values
+    feature_names: Names of feature variables
+  """
+  y_pred = clf.predict(x)
+  print("Validation results")
+  print(classification_report(y, y_pred))
 
 
 def load_training2(infile):
@@ -136,14 +156,18 @@ def main():
   parser.add_argument('--infile',
                       dest='infile',
                       default=INFILE_DEF, 
-                      help='File name to read infile from')
+                      help='File name to read training data from')
   parser.add_argument('--outfile',
                       dest='outfile',
                       default=OUTFILE_DEF, 
                       help='File name to write output to')
+  parser.add_argument('--valfile',
+                      dest='valfile',
+                      default="", 
+                      help='File name to read validation data from')
   args = parser.parse_args()
   logging.info(f'Training decision tree from {args.infile}, output to {args.outfile}')
-  run(args.infile, args.outfile)
+  run(args.infile, args.outfile, args.valfile)
 
 
 # Entry point from a script
