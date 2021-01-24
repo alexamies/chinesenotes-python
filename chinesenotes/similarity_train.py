@@ -71,7 +71,7 @@ def train(x, y, feature_names, outfile):
   print(classification_report(y, y_pred))
   dot_data = tree.export_graphviz(clf, filled = True, rounded = True)
   graph = graphviz.Source(dot_data) 
-  class_names = ['Relevant', 'Not relevant']
+  class_names = ['Not relevant', 'Relevant']
   r = tree.export_text(clf, feature_names=feature_names)
   print(r)
   tree.plot_tree(clf,

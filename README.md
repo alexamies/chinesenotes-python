@@ -7,6 +7,11 @@ Create a virtual environment
 
 ```shell
 python3 -m venv venv
+```
+
+Activate the virtual environment
+
+```shell
 source venv/bin/activate
 ```
 
@@ -595,7 +600,7 @@ Error: 下放 (false positive)
 
 Note: total 199 segments, 2 errors (1 false negative, 1 false positive)
 
-## Log parsing
+## Training for Phrase similarity
 
 Install the prerequisite libraries in the virtual env:
 
@@ -613,6 +618,13 @@ python -m chinesenotes.sim_log_parser \
   --outfile=data/phrase_similarity_training_logs.csv
 ```
 
+For the Chuniu Fanlu data set:
+
+```shell
+python -m chinesenotes.sim_log_parser \
+  --outfile=data/phrase_similarity_chunqiu_logs.csv
+```
+
 Score the results for relevance in a spreadsheet and export to the CSV file
 `data/training_balanced.csv`. 
 
@@ -626,12 +638,12 @@ python -m chinesenotes.similarity_train \
 # output
               precision    recall  f1-score   support
 
-           0       0.83      0.95      0.88       130
-           1       0.65      0.34      0.45        38
+           0       0.84      0.94      0.89       170
+           1       0.63      0.35      0.45        48
 
-    accuracy                           0.81       168
-   macro avg       0.74      0.64      0.67       168
-weighted avg       0.79      0.81      0.79       168
+    accuracy                           0.81       218
+   macro avg       0.73      0.65      0.67       218
+weighted avg       0.79      0.81      0.79       218
 
 |--- Unigram count <= 2.50
 |   |--- Hamming distance <= 2.50
@@ -645,7 +657,40 @@ weighted avg       0.79      0.81      0.79       168
 |   |   |--- class: 0
 ```
 
-Plot the results
+
+Score the combined Biyan and Chunqiu training data for relevance in a
+spreadsheet and export to the CSV file `data/training_combined.csv`. 
+
+Train a decision tree classifier:
+
+```shell
+python -m chinesenotes.similarity_train \
+  --infile=data/training_combined.csv \
+  --outfile=drawings/phrase_similarity_combined_graph.png
+
+# output
+              precision    recall  f1-score   support
+
+           0       0.80      0.83      0.82       173
+           1       0.52      0.48      0.50        67
+
+    accuracy                           0.73       240
+   macro avg       0.66      0.65      0.66       240
+weighted avg       0.73      0.73      0.73       240
+
+|--- Unigram count <= 2.50
+|   |--- Query length <= 3.50
+|   |   |--- class: 0
+|   |--- Query length >  3.50
+|   |   |--- class: 0
+|--- Unigram count >  2.50
+|   |--- Hamming distance <= 9.50
+|   |   |--- class: 1
+|   |--- Hamming distance >  9.50
+|   |   |--- class: 0
+```
+
+Plot the results or Biyan only
 
 ```shell
 python -m chinesenotes.plot_sim_training \
@@ -655,8 +700,22 @@ python -m chinesenotes.plot_sim_training \
   --hamming_lim2=0.62 \
   --outfile3=drawings/phrase_similarity_plot3.png \
   --unigram_lim3=2.5 \
-  --hamming_lim3=4.0
+  --hamming_lim3=9.5
 ```
+
+Plot the results or Biyan and Chunqiu combined
+
+```shell
+python -m chinesenotes.plot_sim_training \
+  --infile=data/training_combined.csv \
+  --outfile2=drawings/phrase_similarity_combined_plot2.png \
+  --unigram_lim2=0.41 \
+  --hamming_lim2=0.62 \
+  --outfile3=drawings/phrase_similarity_combined_plot.png \
+  --unigram_lim3=2.5 \
+  --hamming_lim3=9.5
+```
+
 
 ## Appendix B: Calculation of Character Bigram Correlation
 

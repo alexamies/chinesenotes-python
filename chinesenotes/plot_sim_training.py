@@ -141,7 +141,7 @@ def main():
 
   x3, y = similarity_train.load_training3(args.infile)
   feature_names = ['Unigram count', 'Hamming distance', 'Query length']
-  plot(x3, y, args.outfile3, feature_names, args.unigram_lim3, args.hamming_lim3, 4.0, 4.0, 0.03)
+  plot(x3, y, args.outfile3, feature_names, args.unigram_lim3, args.hamming_lim3, 10.0, 4.0, 0.03)
 
 
 # Entry point from a script

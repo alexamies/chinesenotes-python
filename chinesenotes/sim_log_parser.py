@@ -63,17 +63,21 @@ def process_log(csvOut: _csv.writer, fname: str):
       data = parts[-1]
       values = data.split(',')
       if len(values) > 8:
-        query = values[0].strip()
-        rank = int(values[1]) + 1
-        term = values[2].strip()
-        pMatch = int(values[3])
-        inNotes = int(values[4])
-        uniCount = int(values[5])
-        hamming = int(values[6])
-        is_substring = int(values[7])
-        is_relevant = int(values[7])
-        csvOut.writerow([query, rank, term, pMatch, inNotes, uniCount, hamming,
-                        is_substring, is_relevant])
+        query = ''
+        try:
+          query = values[0].strip()
+          rank = int(values[1]) + 1
+          term = values[2].strip()
+          pMatch = int(values[3])
+          inNotes = int(values[4])
+          uniCount = int(values[5])
+          hamming = int(values[6])
+          is_substring = int(values[7])
+          is_relevant = int(values[7])
+          csvOut.writerow([query, rank, term, pMatch, inNotes, uniCount,
+                           hamming, is_substring, is_relevant])
+        except ValueError as e:
+          logging.info(f'Could not parse line {query}, error: {e}')
 
 
 def main():
