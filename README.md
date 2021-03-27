@@ -465,11 +465,71 @@ python chinesenotes/train_tokenizer.py \
 
 Also, the points with low mutual information can also be added before training.
 
-## Testing
+### Testing
 
 Run unit tests with the command
 ```shell
 python -m unittest discover -s tests -p "*_test.py"
+```
+
+## Loading and Querying Corpus Data in BigQuery
+
+Environment variables
+
+```shell
+PROJECT_ID=[your project]
+DATASET=[your dataset]
+ANALYSIS_BUCKET=[your GCS bucket]
+```
+
+Move the frequency data to Google Cloud Storage
+
+```shell
+gsutil cp index/word_freq_doc.txt gs://${ANALYSIS_BUCKET}
+```
+
+Create the word frequency table and load data
+
+```shell
+bq load --field_delimiter='\t' \
+  ${PROJECT_ID}:${DATASET}.word_freq_doc \
+  gs://${ANALYSIS_BUCKET}/word_freq_doc.txt \
+  word:string,frequency:integer,collection:string,document:string,idf:float,doc_len:integer
+```
+
+Query word frequency to find top 2,000 docs with the term 陀羅尼 (dharani):
+
+```shell
+bq query --destination_table ${PROJECT_ID}:${DATASET}.dharani_doc_freq \
+  "SELECT * FROM ${DATASET}.word_freq_doc WHERE word='陀羅尼' ORDER BY frequency DESC LIMIT 2000"
+```
+
+Export results from BQ to GCS:
+
+```shell
+bq extract \
+  --destination_format CSV \
+  --field_delimiter '\t' \
+  --print_header=true \
+  ${PROJECT_ID}:${DATASET}.dharani_doc_freq \
+  gs://${ANALYSIS_BUCKET}/dharani_doc_freq.tsv
+```
+
+Download file from GCS:
+
+```shell
+gsutil cp gs://${ANALYSIS_BUCKET}/dharani_doc_freq.tsv dharani_doc_freq.tsv
+```
+
+Delete the dataset in BQ:
+
+```shell
+bq rm ${PROJECT_ID}:${DATASET}.dharani_doc_freq
+```
+
+Delete the file in GCS:
+```shell
+gsutil rm 
 ```
 
 ## Appendix A: Term segmentation analysis data
